@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { estimatePrice, type PriceEstimate } from "@/lib/pricing/estimate";
 import { trendAdvice, type TrendAdvice } from "@/lib/pricing/trend";
 import type { Listing } from "@/lib/types";
-import { ConfirmCard, formatPounds, ItemCard, Label, LINE, PricingCard, SERIF } from "./cards";
+import { ConfirmCard, formatPounds, ItemCard, Label, LINE, PostCard, PricingCard, SERIF } from "./cards";
 
 type ChatEntry =
   | { from: "seller"; text: string; photoUrl?: string }
-  | { from: "agent"; text: string; listing?: Listing; pricing?: { estimate: PriceEstimate; trend: TrendAdvice }; confirm?: { defaultListPrice: number } };
+  | {
+      from: "agent";
+      text: string;
+      listing?: Listing;
+      pricing?: { estimate: PriceEstimate; trend: TrendAdvice };
+      confirm?: { defaultListPrice: number };
+      post?: true;
+    };
 
 const GREETING: ChatEntry = {
   from: "agent",
@@ -62,9 +69,13 @@ export default function SellerPage() {
   function showListing(listing: Listing, intro: string) {
     const estimate = estimatePrice(listing.item, { wantedPrice: listing.wantedPrice });
     const trend = trendAdvice(listing.item.category);
+    const live = listing.status !== "draft" && listing.status !== "priced";
     setChat((c) => [
       ...c,
       { from: "agent", text: intro, listing },
+      ...(live || listing.status === "priced"
+        ? [{ from: "agent" as const, text: live ? "It's live. Buyers can message it from any of these pages." : "It's priced and ready to post.", listing, post: true as const }]
+        : []),
       estimate
         ? { from: "agent", text: "Here's what similar items go for.", listing, pricing: { estimate, trend } }
         : { from: "agent", text: "I couldn't find similar items to compare, so set a price you're happy with.", listing, confirm: { defaultListPrice: defaultListPrice(listing, null) } },
@@ -88,9 +99,19 @@ export default function SellerPage() {
   }
 
   function priced(listing: Listing) {
-    say(
-      `Done. Listed at ${formatPounds(listing.listPrice!)} with a ${formatPounds(listing.floorPrice!)} floor that buyers never see. Next, I'll post it everywhere.`,
-    );
+    setChat((c) => [
+      ...c,
+      {
+        from: "agent",
+        text: `Done. Listed at ${formatPounds(listing.listPrice!)} with a ${formatPounds(listing.floorPrice!)} floor that buyers never see. Ready to post it everywhere?`,
+        listing,
+        post: true,
+      },
+    ]);
+  }
+
+  function posted() {
+    say("Posted. I'll handle buyers from here, and you can follow everything on your dashboard.");
   }
 
   function pickPhoto(file: File | undefined) {
@@ -172,7 +193,8 @@ export default function SellerPage() {
               <div key={i} className="flex flex-col gap-2.5">
                 <Label>Selly</Label>
                 <p className={`${SERIF} text-[22px] leading-[1.4]`}>{m.text}</p>
-                {m.listing && !m.pricing && !m.confirm && <ItemCard listing={m.listing} />}
+                {m.listing && !m.pricing && !m.confirm && !m.post && <ItemCard listing={m.listing} />}
+                {m.listing && m.post && <PostCard listing={m.listing} onPosted={posted} />}
                 {m.listing && m.pricing && (
                   <PricingCard
                     estimate={m.pricing.estimate}
