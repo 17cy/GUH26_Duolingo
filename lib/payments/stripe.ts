@@ -105,6 +105,27 @@ export function markPaymentHeld(session: CompletedSession): Deal | null {
   return held;
 }
 
+const lastSync = new Map<string, number>();
+const HELD = new Set(["requires_capture", "succeeded"]);
+
+/**
+ * Fallback for when the webhook isn't delivered (e.g. `stripe listen` isn't running): while a deal is
+ * awaiting payment, ask Stripe directly (server-to-server with our secret key) whether its Checkout
+ * Session completed with the money held, then mark it held exactly as the webhook would.
+ * Throttled to one Stripe call per deal every 3 seconds.
+ */
+export async function syncPaymentFromStripe(dealId: string, stripe: StripeLike = getStripe(), nowMs = Date.now()): Promise<void> {
+  const deal = getDeal(dealId);
+  if (!deal || deal.status !== "awaiting_payment" || !deal.stripeSessionId) return;
+  if (nowMs - (lastSync.get(dealId) ?? -Infinity) < 3000) return;
+  lastSync.set(dealId, nowMs);
+
+  const s = await stripe.checkout.sessions.retrieve(deal.stripeSessionId, { expand: ["payment_intent"] });
+  const pi = s.payment_intent;
+  if (s.status !== "complete" || !pi || typeof pi === "string" || !HELD.has(pi.status)) return;
+  markPaymentHeld({ id: s.id, metadata: s.metadata, payment_intent: pi, amount_total: s.amount_total });
+}
+
 /** Buyer scanned the QR: capture the held payment and complete the sale. Token is single use. */
 export async function captureByToken(token: string, stripe: StripeLike = getStripe()): Promise<Deal | null> {
   const deal = readDb().deals.find((d) => d.handoffToken === token && d.status === "payment_held");

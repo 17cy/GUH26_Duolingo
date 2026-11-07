@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { syncTracking } from "@/lib/delivery/handoff";
 import { MEETING_POINT, proposePickupSlots } from "@/lib/delivery/pickup";
-import { ensurePaymentLink } from "@/lib/payments/stripe";
+import { ensurePaymentLink, syncPaymentFromStripe } from "@/lib/payments/stripe";
 import { getListing, listMessages, readDb } from "@/lib/store";
 import type { Listing, Platform } from "@/lib/types";
 import { ensureConversation } from "./agent";
@@ -35,6 +35,10 @@ export async function buyerConversation(listing: Listing, buyerName: string, fro
   const pending = latestDeal(listing.id, buyerName);
   if (pending?.status === "approved") {
     await ensurePaymentLink(pending.id, undefined, from).catch((err) => console.error("payment link failed", err));
+  }
+  // Paid but no webhook yet (e.g. `stripe listen` not running): check Stripe directly.
+  if (pending?.status === "awaiting_payment") {
+    await syncPaymentFromStripe(pending.id).catch((err) => console.error("payment sync failed", err));
   }
   // Locker tracking advances lazily whenever the buyer's chat polls.
   if (pending?.status === "in_delivery") await syncTracking(pending.id);
