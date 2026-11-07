@@ -7,6 +7,7 @@ import { addMessage, listListings, listMessages, readDb, saveDeal } from "@/lib/
 import type { Deal, Listing, Message } from "@/lib/types";
 import { resolveAction, type Resolved, type ToolCall, type ToolName } from "./enforce";
 import { looksLikeInjection } from "./injection";
+import { marketFacts } from "./market";
 import { parseOfferPence } from "./offer";
 import { filterAgentText } from "./output";
 import { bundlePrice, decide } from "./policy";
@@ -146,14 +147,22 @@ async function askModel(context: string): Promise<ModelReply | null> {
   }
 }
 
-function buildContext(listing: Listing, history: Message[], latest: string, flags: string[], state: string): string {
+function marketSection(market: ReturnType<typeof marketFacts>): string {
+  if (!market) return "<market_facts>unavailable</market_facts>";
+  const claims = market.claims.length
+    ? `Price claims you may make (and no others):\n- ${market.claims.join("\n- ")}`
+    : "Make no price comparisons; talk about condition and included extras instead.";
+  return `<market_facts>${JSON.stringify(market.facts)}\nThese come from asking prices of similar listings, not sold prices.\n${claims}</market_facts>`;
+}
+
+function buildContext(listing: Listing, history: Message[], latest: string, flags: string[], state: string, market: string): string {
   const transcript = history
     .slice(-12)
     .map((m) => (m.from === "buyer" ? `<buyer_message>${quote(m.text)}</buyer_message>` : `Selly: ${m.text}`))
     .join("\n");
   return [
     `<listing>${JSON.stringify(toPublicListing(listing))}</listing>`,
-    `<market_facts>unavailable</market_facts>`,
+    market,
     `<conversation_so_far>\n${transcript}\n</conversation_so_far>`,
     flags.length
       ? `<safety_flags>${flags.join(", ")} — contact details were removed. Politely say everything stays in this chat and payment only goes through our secure link.</safety_flags>`
@@ -240,7 +249,8 @@ export async function handleBuyerMessage(listing: Listing, buyerName: string, ra
   const offerPence = openDeal ? null : parseOfferPence(scam.sanitized);
 
   const state = stateInstruction(listing, offerPence, countersMade, lastCounterPence, openDeal);
-  const reply = await askModel(buildContext(listing, history, scam.sanitized, scam.flags, state));
+  const market = marketFacts(listing);
+  const reply = await askModel(buildContext(listing, history, scam.sanitized, scam.flags, state, marketSection(market)));
 
   // The model only chooses wording; resolveAction + policy.ts choose the action and price.
   const tool = openDeal ? null : (reply?.tool ?? null);
@@ -273,7 +283,7 @@ export async function handleBuyerMessage(listing: Listing, buyerName: string, ra
 
   // Wording: the model's text if it matches the action and passes the output filter, else a template.
   const price = "pricePence" in resolved ? resolved.pricePence : undefined;
-  const allowed = [listing.listPrice!, lastCounterPence, price, bundle, openDeal?.price, offerPence ?? undefined].filter(
+  const allowed = [listing.listPrice!, lastCounterPence, price, bundle, openDeal?.price, offerPence ?? undefined, ...(market?.claimPence ?? [])].filter(
     (p): p is number => p !== undefined,
   );
   const forbidden = price === listing.floorPrice ? [] : [listing.floorPrice!];
