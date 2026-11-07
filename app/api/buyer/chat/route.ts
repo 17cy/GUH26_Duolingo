@@ -29,5 +29,5 @@ export async function POST(req: Request) {
   lastMessageAt.set(key, now);
 
   await handleBuyerMessage(listing, buyerName, text);
-  return Response.json(buyerConversation(listing, buyerName));
+  return Response.json(await buyerConversation(listing, buyerName));
 }

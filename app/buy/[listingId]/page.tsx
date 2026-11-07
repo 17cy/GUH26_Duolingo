@@ -28,7 +28,31 @@ const DEAL_STATUS: Partial<Record<PublicDeal["status"], string>> = {
   awaiting_payment: "Waiting for your payment",
   payment_held: "Payment held safely until handoff",
   in_delivery: "On its way",
+  completed: "Handed over — payment released to the seller",
+  cancelled: "Cancelled — any held payment was released",
 };
+
+// Only our Stripe Checkout links are ever rendered as links.
+const CHECKOUT_URL = /https:\/\/checkout\.stripe\.com\/\S+/;
+
+function AgentText({ text }: { text: string }) {
+  const match = text.match(CHECKOUT_URL);
+  if (!match) return <>{text}</>;
+  const url = match[0].replace(/[.,!?)]+$/, "");
+  const [before, after] = text.split(url);
+  return (
+    <>
+      {before.replace(/\s*here:\s*$/, ".")}
+      <a
+        href={url}
+        className="my-3 flex h-12 items-center justify-center rounded-full bg-[#3B6A8C] font-[family-name:var(--font-ui),system-ui,sans-serif] text-[15px] text-white"
+      >
+        Pay securely with Stripe
+      </a>
+      {after.replace(/^\s*—\s*/, "")}
+    </>
+  );
+}
 
 const gbp = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
 const storageKey = (id: string) => `selly-buyer-${id}`;
@@ -177,7 +201,9 @@ export default function BuyPage() {
                 ) : (
                   <div key={m.id} className="flex flex-col gap-1.5">
                     <div className="text-[11px] uppercase tracking-[0.24em] text-[#3B6A8C]">Selly · AI assistant</div>
-                    <p className={`${SERIF} text-[21px] leading-[1.4]`}>{m.text}</p>
+                    <div className={`${SERIF} text-[21px] leading-[1.4]`}>
+                      <AgentText text={m.text} />
+                    </div>
                   </div>
                 ),
               )}
