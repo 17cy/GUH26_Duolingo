@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getListing } from "@/lib/store";
 import type { Condition, Platform } from "@/lib/types";
+import MarketplaceChat from "./MarketplaceChat";
 
 // SPEC.md "Posting (mocked)": a plain mock marketplace page, clearly DEMO, no real logos or branding.
 // Public data only: never render floorPrice (or anything else not listed below).
@@ -53,13 +53,8 @@ export default async function MockMarketplacePage({ params }: { params: Promise<
                 <dd>{listing.sellerName}</dd>
               </dl>
               {listing.description && <p className="text-sm text-neutral-700">{listing.description}</p>}
-              <Link
-                href={`/buy/${listing.id}`}
-                className="inline-block rounded bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
-              >
-                Message seller
-              </Link>
               <p className="text-xs text-neutral-500">Messages are answered by Selly, an AI assistant selling on the owner&apos;s behalf.</p>
+              <MarketplaceChat listingId={listing.id} sellerName={listing.sellerName} platformName={name} />
             </div>
           </div>
         )}
