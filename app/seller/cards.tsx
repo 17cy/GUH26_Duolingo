@@ -154,6 +154,75 @@ export function PricingCard({
   );
 }
 
+const PLATFORM_LINKS: { platform: string; name: string }[] = [
+  { platform: "ebay", name: "eBay" },
+  { platform: "vinted", name: "Vinted" },
+  { platform: "donedeal", name: "DoneDeal" },
+];
+
+// "Post everywhere" (mocked: no real platform calls). Once posted, links to the DEMO pages and the dashboard.
+export function PostCard({ listing, onPosted }: { listing: Listing; onPosted?: (listing: Listing) => void }) {
+  const [current, setCurrent] = useState(listing);
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function post() {
+    setPosting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/seller/listings/${listing.id}/post`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't post the listing");
+      setCurrent(data.listing as Listing);
+      onPosted?.(data.listing as Listing);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't post the listing");
+    }
+    setPosting(false);
+  }
+
+  const posted = current.status !== "draft" && current.status !== "priced";
+  return (
+    <div className={CARD}>
+      <div className="flex items-center justify-between">
+        <CardLabel>{posted ? "Live on" : "Post everywhere"}</CardLabel>
+        <span className="rounded-full border border-[rgba(30,43,54,0.22)] px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-[#5F6B73]">Demo</span>
+      </div>
+      {posted ? (
+        <>
+          <div className="mt-2 flex flex-col">
+            {PLATFORM_LINKS.map((p, i) => (
+              <a
+                key={p.platform}
+                href={`/m/${p.platform}/${current.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className={`flex items-center justify-between border-t ${i === PLATFORM_LINKS.length - 1 ? "border-b" : ""} ${LINE} py-3 text-sm hover:text-[#3B6A8C]`}
+              >
+                <span>{p.name} (mock page)</span>
+                <span aria-hidden>↗</span>
+              </a>
+            ))}
+          </div>
+          <a href={`/dashboard/${current.id}`} className={`${PRIMARY_BTN} mt-4 flex w-full items-center justify-center`}>
+            Open dashboard
+          </a>
+        </>
+      ) : (
+        <>
+          <p className="mt-2 text-sm leading-relaxed text-[#5F6B73]">
+            I&apos;ll list it on eBay, Vinted and DoneDeal at {formatPounds(current.listPrice ?? 0)}. In this demo the posts are simulated, nothing goes to the real sites.
+          </p>
+          {error && <p className="mt-3 text-sm text-[#9B3B2E]">{error}</p>}
+          <button type="button" onClick={post} disabled={posting} className={`${PRIMARY_BTN} mt-4 w-full`}>
+            {posting ? "Posting…" : "Post everywhere"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 const STYLES: { value: Style; label: string; hint: string }[] = [
   { value: "firm", label: "Firm", hint: "Small discounts only" },
   { value: "flexible", label: "Flexible", hint: "Haggles a bit" },
