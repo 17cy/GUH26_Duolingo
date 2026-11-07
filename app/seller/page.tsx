@@ -34,7 +34,7 @@ function TypingDots() {
 
 const GREETING: ChatEntry = {
   from: "agent",
-  text: "Hi! Tap + to add a photo of what you'd like to sell, and tell me a bit about it. Add a price if you have one in mind, e.g. “want £120”.",
+  text: "Hi! Tap + to add a photo of what you'd like to sell, and tell me a bit about it. Add a price if you have one in mind, e.g. “want £67”.",
 };
 
 // Starting list price for the confirm step: the seller's own price unless it's above market.
