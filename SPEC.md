@@ -221,8 +221,12 @@ and the agent tells the buyer politely and continues negotiating.
 ## Notifications
 
 The dashboard feed shows events of type: offer_received, lowball_declined, scam_flagged,
-injection_attempt, deal_proposed, payment_held, handed_over, sold. Lowball offers are summarised
-("3 lowball offers declined"), not pushed one by one.
+injection_attempt, deal_proposed, payment_held, pickup_scheduled, shipment_created, tracking_update,
+handed_over, sold. Lowball offers are summarised ("3 lowball offers declined"), not pushed one by one.
+
+The seller chat also reports each live listing's deal as it happens: deal agreed (auto-approved),
+payment held, pickup booked (with a link to the handoff QR), locker shipment and each tracking step,
+sold, and cancelled.
 
 ## Savings goal
 
