@@ -8,7 +8,7 @@ const TITLE: Partial<Record<EventType, string>> = {
   lowball_declined: "Lowball offers blocked",
   scam_flagged: "Scam attempt blocked",
   injection_attempt: "Suspicious message ignored",
-  deal_proposed: "Deal awaiting your approval",
+  deal_proposed: "Deal agreed",
   payment_held: "Payment held",
   handed_over: "Handed over",
   sold: "Sold",
