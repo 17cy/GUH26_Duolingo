@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { estimatePrice, type PriceEstimate } from "@/lib/pricing/estimate";
 import { trendAdvice, type TrendAdvice } from "@/lib/pricing/trend";
 import type { Listing } from "@/lib/types";
-import { ConfirmCard, formatPounds, ItemCard, Label, LINE, PricingCard, SERIF } from "./cards";
+import { ConfirmCard, formatPounds, ItemCard, Label, LINE, PostCard, PricingCard, SERIF } from "./cards";
 
 type ChatEntry =
   | { from: "seller"; text: string; photoUrl?: string }
-  | { from: "agent"; text: string; listing?: Listing; pricing?: { estimate: PriceEstimate; trend: TrendAdvice }; confirm?: { defaultListPrice: number } };
+  | {
+      from: "agent";
+      text: string;
+      listing?: Listing;
+      pricing?: { estimate: PriceEstimate; trend: TrendAdvice };
+      confirm?: { defaultListPrice: number };
+      post?: true;
+    };
 
 const GREETING: ChatEntry = {
   from: "agent",
@@ -59,16 +66,21 @@ export default function SellerPage() {
     setChat((c) => [...c, { from: "agent", text }]);
   }
 
+  // Picks up where the listing is: a draft gets pricing, a priced one gets "Post everywhere",
+  // a live one gets its links. Finished steps are never offered again.
   function showListing(listing: Listing, intro: string) {
-    const estimate = estimatePrice(listing.item, { wantedPrice: listing.wantedPrice });
-    const trend = trendAdvice(listing.item.category);
-    setChat((c) => [
-      ...c,
-      { from: "agent", text: intro, listing },
-      estimate
-        ? { from: "agent", text: "Here's what similar items go for.", listing, pricing: { estimate, trend } }
-        : { from: "agent", text: "I couldn't find similar items to compare, so set a price you're happy with.", listing, confirm: { defaultListPrice: defaultListPrice(listing, null) } },
-    ]);
+    const next = ((): ChatEntry | null => {
+      if (listing.status === "draft") {
+        const estimate = estimatePrice(listing.item, { wantedPrice: listing.wantedPrice });
+        return estimate
+          ? { from: "agent", text: "Here's what similar items go for.", listing, pricing: { estimate, trend: trendAdvice(listing.item.category) } }
+          : { from: "agent", text: "I couldn't find similar items to compare, so set a price you're happy with.", listing, confirm: { defaultListPrice: defaultListPrice(listing, null) } };
+      }
+      if (listing.status === "priced") return { from: "agent", text: "It's priced and ready to post.", listing, post: true };
+      if (listing.status === "posted") return { from: "agent", text: "It's live. Buyers can message it from any of these pages.", listing, post: true };
+      return { from: "agent", text: listing.status === "sold" ? "This one has sold." : "This listing has been withdrawn." };
+    })();
+    setChat((c) => [...c, { from: "agent", text: intro, listing }, ...(next ? [next] : [])]);
   }
 
   function choose(entryIndex: number, choice: "sell_now" | "wait") {
@@ -88,9 +100,19 @@ export default function SellerPage() {
   }
 
   function priced(listing: Listing) {
-    say(
-      `Done. Listed at ${formatPounds(listing.listPrice!)} with a ${formatPounds(listing.floorPrice!)} floor that buyers never see. Next, I'll post it everywhere.`,
-    );
+    setChat((c) => [
+      ...c,
+      {
+        from: "agent",
+        text: `Done. Listed at ${formatPounds(listing.listPrice!)} with a ${formatPounds(listing.floorPrice!)} floor that buyers never see. Ready to post it everywhere?`,
+        listing,
+        post: true,
+      },
+    ]);
+  }
+
+  function posted() {
+    say("Posted. I'll handle buyers from here, and you can follow everything on your dashboard.");
   }
 
   function pickPhoto(file: File | undefined) {
@@ -172,7 +194,8 @@ export default function SellerPage() {
               <div key={i} className="flex flex-col gap-2.5">
                 <Label>Selly</Label>
                 <p className={`${SERIF} text-[22px] leading-[1.4]`}>{m.text}</p>
-                {m.listing && !m.pricing && !m.confirm && <ItemCard listing={m.listing} />}
+                {m.listing && !m.pricing && !m.confirm && !m.post && <ItemCard listing={m.listing} />}
+                {m.listing && m.post && <PostCard listing={m.listing} onPosted={posted} />}
                 {m.listing && m.pricing && (
                   <PricingCard
                     estimate={m.pricing.estimate}
