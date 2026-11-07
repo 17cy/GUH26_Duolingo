@@ -199,7 +199,9 @@ The UI says: "You'll likely receive about 84–89% of your list price after nego
 
 - Platforms: eBay, Vinted, DoneDeal. No real API calls.
 - `app/m/[platform]/[listingId]`: plain page, big "DEMO — mock marketplace" banner, **no real
-  logos**, a "Message seller" link to `/buy/[listingId]`.
+  logos**. "Message seller" opens the buyer chat **inside the marketplace page** (the buyer never
+  leaves the platform), using the buyer APIs `/api/buyer/conversation` and `/api/buyer/chat`.
+  Each reply is labelled as coming from Selly (AI) on the seller's behalf.
 
 ## Statuses
 
@@ -229,7 +231,9 @@ proceeds are split into two simulated pots and a progress bar shows the goal. La
 
 ## Buyer flow (Person B)
 
-1. Buyer opens `/buy/[listingId]` (public listing data only: never the floor price).
+1. Buyer taps "Message seller" on a mock marketplace page, which opens the chat in that page
+   (`/buy/[listingId]` remains as a standalone version). Public listing data only: never the
+   floor price. Anything shown in the chat (deal status, payment link) must work in both places.
 2. First agent message, exactly:
    > "Hi! I'm Selly, an AI assistant selling this on behalf of the owner. I can answer
    > questions, take offers and arrange a safe payment."
