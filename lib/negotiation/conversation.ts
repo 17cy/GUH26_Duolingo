@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { syncTracking } from "@/lib/delivery/handoff";
+import { MEETING_POINT, proposePickupSlots } from "@/lib/delivery/pickup";
 import { ensurePaymentLink } from "@/lib/payments/stripe";
 import { getListing, listMessages, readDb } from "@/lib/store";
 import type { Listing } from "@/lib/types";
@@ -30,11 +32,16 @@ export async function buyerConversation(listing: Listing, buyerName: string) {
   if (pending?.status === "approved") {
     await ensurePaymentLink(pending.id).catch((err) => console.error("payment link failed", err));
   }
+  // Locker tracking advances lazily whenever the buyer's chat polls.
+  if (pending?.status === "in_delivery") await syncTracking(pending.id);
 
   const deal = latestDeal(listing.id, buyerName);
+  const choosing = deal?.status === "payment_held" && !deal.handoffMethod;
   return {
     listing: toPublicListing(listing),
     messages: listMessages(listing.id, buyerName).map(({ id, from, text, createdAt }) => ({ id, from, text, createdAt })),
     deal: deal ? toPublicDeal(deal) : null,
+    // Present only while the buyer still has to choose pickup or locker.
+    handoffOptions: choosing ? { pickupSlots: proposePickupSlots(Date.now()), meetingPoint: MEETING_POINT } : null,
   };
 }

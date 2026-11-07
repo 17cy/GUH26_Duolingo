@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
+import { delistEverywhere } from "@/lib/delivery/delist";
 import { addEvent } from "@/lib/events";
 import { addMessage, getDeal, getListing, readDb, saveDeal, saveListing } from "@/lib/store";
 import type { Deal } from "@/lib/types";
@@ -22,7 +23,7 @@ const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 const gbp = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
 const now = () => new Date().toISOString();
 
-function tellBuyer(deal: Deal, text: string, id = nanoid()) {
+export function tellBuyer(deal: Deal, text: string, id = nanoid()) {
   if (readDb().messages.some((m) => m.id === id)) return;
   addMessage({ id, listingId: deal.listingId, buyerName: deal.buyerName, from: "agent", text, createdAt: now() });
 }
@@ -92,7 +93,7 @@ export function markPaymentHeld(session: CompletedSession): Deal | null {
   });
   tellBuyer(
     deal,
-    `Payment received — ${gbp(deal.price)} is held safely and only released to the seller at handoff. When you meet, scan the QR code on the seller's phone to confirm you've got the item.`,
+    `Payment received — ${gbp(deal.price)} is held safely and only released to the seller at handoff. Choose how you'd like to get it: pick it up in person, or have it sent to a parcel locker.`,
     `held-${deal.id}`,
   );
   return held;
@@ -106,23 +107,33 @@ export async function captureByToken(token: string, stripe: StripeLike = getStri
   // Burn the token before the network call so a double scan can't capture twice.
   saveDeal({ ...deal, handoffToken: undefined });
   try {
-    await stripe.paymentIntents.capture(deal.paymentIntentId);
+    return await completeSale({ ...deal, handoffToken: undefined }, stripe, `Handed over to ${deal.buyerName}`);
   } catch (err) {
     saveDeal(deal);
     throw err;
   }
+}
 
-  const done = saveDeal({ ...deal, handoffToken: undefined, status: "completed" });
+/**
+ * Captures the held payment and completes the sale: deal completed, listing sold, events,
+ * simulated payout, and delisted on every platform. Shared by QR pickup and locker delivery.
+ * Throws (and changes nothing) if Stripe capture fails.
+ */
+export async function completeSale(deal: Deal, stripe: StripeLike, handedOverMessage: string): Promise<Deal> {
+  await stripe.paymentIntents.capture(deal.paymentIntentId!);
+
+  const done = saveDeal({ ...deal, status: "completed" });
   const listing = getListing(deal.listingId);
   if (listing) saveListing({ ...listing, status: "sold" });
   const data = { dealId: deal.id, buyerName: deal.buyerName };
-  addEvent(deal.listingId, "handed_over", `Handed over to ${deal.buyerName}`, data);
+  addEvent(deal.listingId, "handed_over", handedOverMessage, data);
   addEvent(deal.listingId, "payment_captured", `${gbp(deal.price)} captured from escrow`, data);
   addEvent(deal.listingId, "sold", `Sold to ${deal.buyerName} for ${gbp(deal.price)}`, { ...data, price: deal.price });
   addEvent(deal.listingId, "payout_sent", `Payout of ${gbp(deal.price)} sent to ${listing?.sellerName ?? "the seller"} (simulated)`, {
     ...data,
     simulated: true,
   });
+  if (listing) delistEverywhere(listing);
   tellBuyer(deal, "Handover confirmed and the payment has been released to the seller. Enjoy!", `done-${deal.id}`);
   return done;
 }

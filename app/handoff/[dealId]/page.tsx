@@ -1,5 +1,8 @@
 import localFont from "next/font/local";
 import QRCode from "qrcode";
+import { TrackingSteps } from "@/app/buy/Delivery";
+import { syncTracking } from "@/lib/delivery/handoff";
+import { MEETING_POINT } from "@/lib/delivery/pickup";
 import { getDeal, getListing } from "@/lib/store";
 import { CancelButton, Refresh } from "./controls";
 
@@ -15,6 +18,7 @@ const gbp = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
 // item, which captures the held payment.
 export default async function HandoffPage({ params }: { params: Promise<{ dealId: string }> }) {
   const { dealId } = await params;
+  await syncTracking(dealId); // locker deals advance while the seller watches too
   const deal = getDeal(dealId);
   const listing = deal && getListing(deal.listingId);
 
@@ -30,9 +34,24 @@ export default async function HandoffPage({ params }: { params: Promise<{ dealId
           {gbp(deal.price)} from {deal.buyerName} is held safely. Hand over the item, then let them scan this code to release the payment to
           you.
         </p>
+        {deal.pickupSlot && (
+          <p className="rounded-2xl bg-[#BAD8EC] px-4 py-3 text-[14px] text-[#14212B]">
+            Pickup: {deal.pickupSlot} at {MEETING_POINT}
+          </p>
+        )}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={qr} alt="Handoff QR code for the buyer to scan" className="mx-auto w-full max-w-[320px] rounded-2xl" />
         <CancelButton dealId={deal.id} />
+      </>
+    );
+  } else if (deal.status === "in_delivery" && deal.tracking) {
+    body = (
+      <>
+        <p className="text-[15px] leading-relaxed text-[#5F6B73]">
+          {gbp(deal.price)} from {deal.buyerName} is held safely. Drop the item at the locker; the payment is released to you automatically on
+          delivery.
+        </p>
+        <TrackingSteps tracking={deal.tracking} />
       </>
     );
   } else if (deal.status === "completed") {
