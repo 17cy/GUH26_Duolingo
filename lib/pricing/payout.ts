@@ -41,24 +41,40 @@ export interface Payout {
   locker: HandoffPayout & { size: LockerSize };
 }
 
+export function paymentFee(amount: number): number {
+  return Math.round(amount * PAYMENT_FEE_RATE) + PAYMENT_FEE_FIXED;
+}
+
+// Net proceeds of an actual (completed) deal: agreed price − payment fee − locker shipping.
+export function dealNet(price: number, category: Category, handoffMethod: "pickup" | "locker" | undefined): number {
+  const shipping = handoffMethod === "locker" ? LOCKER_PRICE[CATEGORY_SIZE[category]] : 0;
+  return Math.max(0, price - paymentFee(price) - shipping);
+}
+
+// Savings goal (simulated pots): savePct% of the proceeds to savings, the rest to spending.
+export function splitProceeds(total: number, savePct = 70): { save: number; spend: number } {
+  const save = Math.round((total * savePct) / 100);
+  return { save, spend: total - save };
+}
+
 export function netPayout(listPrice: number, style: Style, category: Category): Payout {
   const expectedDeal = Math.round(listPrice * STYLE_FACTOR[style]);
-  const paymentFee = Math.round(expectedDeal * PAYMENT_FEE_RATE) + PAYMENT_FEE_FIXED;
+  const fee = paymentFee(expectedDeal);
   const size = CATEGORY_SIZE[category];
 
   const handoff = (shipping: number): HandoffPayout => {
-    const net = Math.max(0, expectedDeal - paymentFee - shipping);
+    const net = Math.max(0, expectedDeal - fee - shipping);
     return {
       shipping,
       net,
       percentOfList: listPrice > 0 ? (net / listPrice) * 100 : 0,
       lines: [
         { label: "Expected deal after negotiation", amount: expectedDeal },
-        { label: "Payment fee", amount: -paymentFee },
+        { label: "Payment fee", amount: -fee },
         { label: "Shipping", amount: shipping === 0 ? 0 : -shipping },
       ],
     };
   };
 
-  return { listPrice, expectedDeal, paymentFee, pickup: handoff(0), locker: { ...handoff(LOCKER_PRICE[size]), size } };
+  return { listPrice, expectedDeal, paymentFee: fee, pickup: handoff(0), locker: { ...handoff(LOCKER_PRICE[size]), size } };
 }

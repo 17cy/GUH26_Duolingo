@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AgentText, DEAL_STATUS } from "@/app/buy/AgentText";
 import type { PublicDeal } from "@/lib/negotiation/public";
 
 // The marketplace's own "Message seller" box (mock, neutral styling). Talks to Person B's buyer APIs
@@ -15,14 +16,6 @@ interface Conversation {
   messages: ChatMessage[];
   deal: PublicDeal | null;
 }
-
-const DEAL_STATUS: Partial<Record<PublicDeal["status"], string>> = {
-  awaiting_seller_approval: "Waiting for the seller to approve",
-  approved: "Approved — preparing your secure payment link",
-  awaiting_payment: "Waiting for your payment",
-  payment_held: "Payment held safely until handoff",
-  in_delivery: "On its way",
-};
 
 const gbp = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
 const storageKey = (id: string) => `selly-buyer-${id}`; // same key as /buy, so a buyer keeps one conversation
@@ -173,7 +166,14 @@ export default function MarketplaceChat({ listingId, sellerName, platformName }:
                   }`}
                 >
                   {m.from === "agent" && <div className="mb-0.5 text-[11px] font-semibold text-neutral-500">{sellerName} · via Selly (AI)</div>}
-                  {m.text}
+                  {m.from === "agent" ? (
+                    <AgentText
+                      text={m.text}
+                      buttonClassName="my-2 flex h-10 items-center justify-center rounded bg-neutral-900 text-sm font-semibold text-white hover:bg-neutral-700"
+                    />
+                  ) : (
+                    m.text
+                  )}
                 </div>
               ),
             )}
