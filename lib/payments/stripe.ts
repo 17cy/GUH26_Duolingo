@@ -64,7 +64,7 @@ export async function ensurePaymentLink(dealId: string, stripe: StripeLike = get
     });
     tellBuyer(
       deal,
-      `The seller approved! Pay ${gbp(deal.price)} securely here: ${session.url} — your money is held safely and only released to the seller when you collect the item. The link expires in 30 minutes.`,
+      `Pay ${gbp(deal.price)} securely here: ${session.url} — your money is held safely and only released to the seller when you collect the item. The link expires in 30 minutes.`,
       `paylink-${deal.id}`,
     );
   } finally {

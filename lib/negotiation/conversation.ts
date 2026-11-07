@@ -27,7 +27,7 @@ function latestDeal(listingId: string, buyerName: string) {
 export async function buyerConversation(listing: Listing, buyerName: string) {
   ensureConversation(listing.id, buyerName);
 
-  // The seller approves on their dashboard (A3); we react here by creating the payment link.
+  // Agreed deals are auto-approved (seller's floor = pre-approval); we react here by creating the payment link.
   const pending = latestDeal(listing.id, buyerName);
   if (pending?.status === "approved") {
     await ensurePaymentLink(pending.id).catch((err) => console.error("payment link failed", err));
