@@ -18,8 +18,19 @@ describe("buildFeed", () => {
     expect(feed[2]).toMatchObject({ title: "New offer", message: "Jo offered £100" });
   });
 
-  it("includes every SPEC type", () => {
-    const types: EventType[] = ["offer_received", "scam_flagged", "injection_attempt", "deal_proposed", "payment_held", "handed_over", "sold"];
+  it("includes every SPEC type, including pickup and shipping updates", () => {
+    const types: EventType[] = [
+      "offer_received",
+      "scam_flagged",
+      "injection_attempt",
+      "deal_proposed",
+      "payment_held",
+      "pickup_scheduled",
+      "shipment_created",
+      "tracking_update",
+      "handed_over",
+      "sold",
+    ];
     expect(buildFeed(types.map((t) => ev(t))).length).toBe(types.length);
   });
 

@@ -24,6 +24,9 @@ const ICON: Partial<Record<FeedItem["type"], string>> = {
   injection_attempt: "!",
   deal_proposed: "?",
   payment_held: "✓",
+  pickup_scheduled: "⌂",
+  shipment_created: "▣",
+  tracking_update: "»",
   handed_over: "→",
   sold: "★",
 };

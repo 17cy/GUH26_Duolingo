@@ -1,4 +1,6 @@
+import { syncTracking } from "@/lib/delivery/handoff";
 import { listEvents } from "@/lib/events";
+import { syncPaymentFromStripe } from "@/lib/payments/stripe";
 import { dealNet } from "@/lib/pricing/payout";
 import { getListing, listMessages, readDb } from "@/lib/store";
 
@@ -9,6 +11,14 @@ export async function GET(req: Request) {
 
   const listing = getListing(listingId);
   if (!listing) return Response.json({ error: "Listing not found" }, { status: 404 });
+
+  // Payments (if the webhook is late) and DEMO locker tracking advance lazily on polls; let the
+  // seller's poll move them on too, so the seller hears even if the buyer closed their tab.
+  for (const d of readDb().deals) {
+    if (d.listingId !== listingId) continue;
+    if (d.status === "awaiting_payment") await syncPaymentFromStripe(d.id).catch((err) => console.error("payment sync failed", err));
+    if (d.status === "in_delivery") await syncTracking(d.id).catch((err) => console.error("tracking sync failed", err));
+  }
 
   const db = readDb();
   const deals = db.deals.filter((d) => d.listingId === listingId || d.bundleListingIds?.includes(listingId));
