@@ -1,6 +1,6 @@
-# CLAUDE.md — FlipAgent
+# CLAUDE.md — Selly
 
-FlipAgent is a 5-hour hackathon build: a seller chats with an AI agent, sends a photo, and the
+Selly is a 5-hour hackathon build: a seller chats with an AI agent, sends a photo, and the
 agent identifies the item, prices it, "posts" it, negotiates with buyers, holds payment in escrow,
 arranges handoff, and marks it sold. **`SPEC.md` is the source of truth for behaviour.** If the
 code and SPEC.md disagree, stop and ask; don't guess.

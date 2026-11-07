@@ -1,4 +1,4 @@
-# SPEC.md — FlipAgent
+# SPEC.md — Selly
 
 **One line:** an AI agent that sells your second-hand item for you: identifies it from a photo,
 prices it, posts it, negotiates, holds the buyer's money in escrow until handoff, and turns the
