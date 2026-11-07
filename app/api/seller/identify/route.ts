@@ -3,6 +3,7 @@ import path from "node:path";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { addEvent } from "@/lib/events";
+import { extractWantedPrice } from "@/lib/pricing/wantedPrice";
 import { saveListing } from "@/lib/store";
 import type { Listing } from "@/lib/types";
 import { identifyItem, type ImageMediaType } from "@/lib/vision/identify";
@@ -19,13 +20,6 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 const BodySchema = z.object({
   text: z.string().trim().max(500).default(""),
-  // Pounds as typed by the seller, e.g. "120" or "119.99"; stored as integer pence.
-  wantedPrice: z
-    .string()
-    .trim()
-    .regex(/^\d{1,6}(\.\d{1,2})?$/, "Wanted price must be a number like 120 or 119.99")
-    .transform((v) => Math.round(Number(v) * 100))
-    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -35,10 +29,7 @@ export async function POST(req: Request) {
   if (!(photo.type in EXT)) return Response.json({ error: "Photo must be JPEG, PNG, WebP or GIF" }, { status: 400 });
   if (photo.size > MAX_BYTES) return Response.json({ error: "Photo must be under 5 MB" }, { status: 400 });
 
-  const body = BodySchema.safeParse({
-    text: form.get("text") ?? undefined,
-    wantedPrice: form.get("wantedPrice") || undefined,
-  });
+  const body = BodySchema.safeParse({ text: form.get("text") ?? undefined });
   if (!body.success) return Response.json({ error: z.prettifyError(body.error) }, { status: 400 });
 
   const mediaType = photo.type as ImageMediaType;
@@ -62,7 +53,7 @@ export async function POST(req: Request) {
     item,
     imageUrl: `/uploads/${fileName}`,
     description: body.data.text,
-    wantedPrice: body.data.wantedPrice,
+    wantedPrice: extractWantedPrice(body.data.text),
     style: "flexible",
     status: "draft",
     platforms: [],
