@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { delistEverywhere } from "@/lib/delivery/delist";
 import { addEvent } from "@/lib/events";
 import { addMessage, getDeal, getListing, readDb, saveDeal, saveListing } from "@/lib/store";
-import type { Deal } from "@/lib/types";
+import type { Deal, Platform } from "@/lib/types";
 
 // SPEC "Payment and escrow" + "Handoff". Stripe test mode only, hosted Checkout (no card data
 // here), manual capture = money held until the buyer scans the handoff QR.
@@ -28,7 +28,13 @@ export function tellBuyer(deal: Deal, text: string, id = nanoid()) {
   addMessage({ id, listingId: deal.listingId, buyerName: deal.buyerName, from: "agent", text, createdAt: now() });
 }
 
-export function checkoutSessionParams(deal: Deal, itemName: string, baseUrl: string, nowMs = Date.now()) {
+/** Where the buyer lands after Checkout: the mock marketplace page they chatted on (chat open), else /buy. */
+export function buyerReturnPath(listingId: string, from?: Platform): string {
+  return from ? `/m/${from}/${listingId}?chat=1` : `/buy/${listingId}`;
+}
+
+export function checkoutSessionParams(deal: Deal, itemName: string, baseUrl: string, nowMs = Date.now(), from?: Platform) {
+  const back = `${baseUrl}${buyerReturnPath(deal.listingId, from)}`;
   return {
     mode: "payment" as const,
     line_items: [
@@ -38,15 +44,15 @@ export function checkoutSessionParams(deal: Deal, itemName: string, baseUrl: str
     metadata: { dealId: deal.id },
     // Stripe requires at least 30 minutes; the extra minute absorbs clock skew.
     expires_at: Math.floor(nowMs / 1000) + 31 * 60,
-    success_url: `${baseUrl}/buy/${deal.listingId}?paid=1`,
-    cancel_url: `${baseUrl}/buy/${deal.listingId}`,
+    success_url: `${back}${back.includes("?") ? "&" : "?"}paid=1`,
+    cancel_url: back,
   };
 }
 
 const creating = new Set<string>();
 
 /** On an approved deal, creates its single Checkout Session and posts the link to the buyer. */
-export async function ensurePaymentLink(dealId: string, stripe: StripeLike = getStripe()): Promise<void> {
+export async function ensurePaymentLink(dealId: string, stripe: StripeLike = getStripe(), from?: Platform): Promise<void> {
   const deal = getDeal(dealId);
   if (!deal || deal.status !== "approved" || deal.stripeSessionId || creating.has(dealId)) return;
   const listing = getListing(deal.listingId);
@@ -54,7 +60,7 @@ export async function ensurePaymentLink(dealId: string, stripe: StripeLike = get
 
   creating.add(dealId);
   try {
-    const session = await stripe.checkout.sessions.create(checkoutSessionParams(deal, listing.item.name, appUrl()));
+    const session = await stripe.checkout.sessions.create(checkoutSessionParams(deal, listing.item.name, appUrl(), Date.now(), from));
     const latest = getDeal(dealId);
     if (!latest || latest.status !== "approved") return;
     saveDeal({ ...latest, stripeSessionId: session.id, status: "awaiting_payment" });
