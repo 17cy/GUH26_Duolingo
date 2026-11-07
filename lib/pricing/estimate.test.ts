@@ -42,6 +42,16 @@ describe("estimatePrice", () => {
     expect(estimatePrice(sony, { comps: {} })).toBeNull();
   });
 
+  it("never prices an 'other' item from unrelated 'other' comps (a Rolex is not a kettle)", () => {
+    const rolex = { ...sony, name: "Rolex Oyster Perpetual 28", brand: "Rolex", category: "other" as const };
+    expect(estimatePrice(rolex)).toBeNull();
+  });
+
+  it("still uses item-specific comps for an 'other' item", () => {
+    const rolex = { ...sony, name: "Rolex Oyster Perpetual 28", category: "other" as const, condition: "new" as const };
+    expect(estimatePrice(rolex, { comps: { "rolex-oyster-perpetual-28": [comp(500000)] } })!.typical).toBe(450000);
+  });
+
   it("handles a single comp (low = typical = high)", () => {
     const e = estimatePrice({ ...sony, condition: "new" }, { comps: { headphones: [comp(10000)] } })!;
     expect([e.low, e.typical, e.high]).toEqual([9000, 9000, 9000]);

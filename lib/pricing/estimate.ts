@@ -53,7 +53,10 @@ export function estimatePrice(
   const table = opts.comps ?? (compsFixture as CompsTable);
   const exact = table[itemKey(item)];
   const source = exact?.length ? "item" : "category";
-  const comps = source === "item" ? exact : (table[item.category] ?? []);
+  // "other" is a catch-all (lamps, kettles, watches…): its comps say nothing about an arbitrary
+  // item, so without item-specific comps we give no estimate rather than a junk price.
+  const categoryComps = item.category === "other" ? [] : (table[item.category] ?? []);
+  const comps = source === "item" ? exact : categoryComps;
   if (comps.length === 0) return null;
 
   const mult = CONDITION_MULTIPLIER[item.condition] * ASKING_TO_SOLD;
