@@ -66,20 +66,21 @@ export default function SellerPage() {
     setChat((c) => [...c, { from: "agent", text }]);
   }
 
+  // Picks up where the listing is: a draft gets pricing, a priced one gets "Post everywhere",
+  // a live one gets its links. Finished steps are never offered again.
   function showListing(listing: Listing, intro: string) {
-    const estimate = estimatePrice(listing.item, { wantedPrice: listing.wantedPrice });
-    const trend = trendAdvice(listing.item.category);
-    const live = listing.status !== "draft" && listing.status !== "priced";
-    setChat((c) => [
-      ...c,
-      { from: "agent", text: intro, listing },
-      ...(live || listing.status === "priced"
-        ? [{ from: "agent" as const, text: live ? "It's live. Buyers can message it from any of these pages." : "It's priced and ready to post.", listing, post: true as const }]
-        : []),
-      estimate
-        ? { from: "agent", text: "Here's what similar items go for.", listing, pricing: { estimate, trend } }
-        : { from: "agent", text: "I couldn't find similar items to compare, so set a price you're happy with.", listing, confirm: { defaultListPrice: defaultListPrice(listing, null) } },
-    ]);
+    const next = ((): ChatEntry | null => {
+      if (listing.status === "draft") {
+        const estimate = estimatePrice(listing.item, { wantedPrice: listing.wantedPrice });
+        return estimate
+          ? { from: "agent", text: "Here's what similar items go for.", listing, pricing: { estimate, trend: trendAdvice(listing.item.category) } }
+          : { from: "agent", text: "I couldn't find similar items to compare, so set a price you're happy with.", listing, confirm: { defaultListPrice: defaultListPrice(listing, null) } };
+      }
+      if (listing.status === "priced") return { from: "agent", text: "It's priced and ready to post.", listing, post: true };
+      if (listing.status === "posted") return { from: "agent", text: "It's live. Buyers can message it from any of these pages.", listing, post: true };
+      return { from: "agent", text: listing.status === "sold" ? "This one has sold." : "This listing has been withdrawn." };
+    })();
+    setChat((c) => [...c, { from: "agent", text: intro, listing }, ...(next ? [next] : [])]);
   }
 
   function choose(entryIndex: number, choice: "sell_now" | "wait") {
