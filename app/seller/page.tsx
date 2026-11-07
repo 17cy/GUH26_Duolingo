@@ -112,7 +112,7 @@ export default function SellerPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col bg-gray-50 p-4 text-gray-900">
-      <h1 className="mb-4 text-xl font-bold">FlipAgent — sell something</h1>
+      <h1 className="mb-4 text-xl font-bold">Selly</h1>
 
       <div className="flex-1 space-y-3">
         {chat.map((m, i) => (
