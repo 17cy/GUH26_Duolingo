@@ -1,0 +1,66 @@
+{
+  "listings": [
+    {
+      "id": "seed-sony",
+      "sellerName": "Alex",
+      "item": {
+        "name": "Sony WH-1000XM4",
+        "brand": "Sony",
+        "model": "WH-1000XM4",
+        "category": "headphones",
+        "condition": "good",
+        "defects": ["light wear on headband"],
+        "confidence": 0.95
+      },
+      "imageUrl": "/seed/sony-wh-1000xm4.jpg",
+      "description": "Sony WH-1000XM4 wireless noise-cancelling headphones in black. Good condition with light wear on the headband. Comes with case and charging cable.",
+      "listPrice": 14000,
+      "floorPrice": 11000,
+      "style": "flexible",
+      "status": "posted",
+      "platforms": ["ebay", "vinted", "donedeal"],
+      "createdAt": "2026-11-07T09:00:00.000Z"
+    },
+    {
+      "id": "seed-charger",
+      "sellerName": "Alex",
+      "item": {
+        "name": "Anker 65W USB-C charger",
+        "brand": "Anker",
+        "model": "65W USB-C",
+        "category": "electronics",
+        "condition": "like_new",
+        "defects": [],
+        "confidence": 0.9
+      },
+      "imageUrl": "/seed/anker-65w-charger.jpg",
+      "description": "Anker 65W USB-C fast charger. Like new, barely used.",
+      "listPrice": 1500,
+      "floorPrice": 1000,
+      "style": "flexible",
+      "status": "posted",
+      "platforms": ["ebay", "vinted", "donedeal"],
+      "createdAt": "2026-11-07T09:05:00.000Z"
+    }
+  ],
+  "deals": [],
+  "messages": [],
+  "events": [
+    {
+      "id": "seed-evt-sony-posted",
+      "listingId": "seed-sony",
+      "type": "posted",
+      "message": "Posted to eBay, Vinted and DoneDeal (DEMO)",
+      "data": { "platforms": ["ebay", "vinted", "donedeal"] },
+      "createdAt": "2026-11-07T09:00:00.000Z"
+    },
+    {
+      "id": "seed-evt-charger-posted",
+      "listingId": "seed-charger",
+      "type": "posted",
+      "message": "Posted to eBay, Vinted and DoneDeal (DEMO)",
+      "data": { "platforms": ["ebay", "vinted", "donedeal"] },
+      "createdAt": "2026-11-07T09:05:00.000Z"
+    }
+  ]
+}

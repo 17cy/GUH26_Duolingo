@@ -1,0 +1,56 @@
+{
+  "sony-wh-1000xm4": [
+    { "title": "Sony WH-1000XM4 black, boxed", "pricePence": 17500, "condition": "like_new", "platform": "ebay" },
+    { "title": "Sony WH-1000XM4 noise cancelling headphones", "pricePence": 15000, "condition": "good", "platform": "ebay" },
+    { "title": "Sony XM4 headphones silver", "pricePence": 14500, "condition": "good", "platform": "vinted" },
+    { "title": "Sony WH1000XM4 with case", "pricePence": 16000, "condition": "like_new", "platform": "donedeal" },
+    { "title": "Sony WH-1000XM4 used", "pricePence": 13000, "condition": "good", "platform": "vinted" },
+    { "title": "Sony XM4 headphones, earpads worn", "pricePence": 11000, "condition": "fair", "platform": "ebay" },
+    { "title": "Sony WH-1000XM4 midnight blue", "pricePence": 15500, "condition": "good", "platform": "donedeal" },
+    { "title": "Sony WH-1000XM4 no box", "pricePence": 12500, "condition": "fair", "platform": "vinted" }
+  ],
+  "headphones": [
+    { "title": "Bose QuietComfort 45", "pricePence": 14000, "condition": "good", "platform": "ebay" },
+    { "title": "Sennheiser Momentum 3", "pricePence": 12000, "condition": "good", "platform": "vinted" },
+    { "title": "Apple AirPods Max", "pricePence": 28000, "condition": "like_new", "platform": "donedeal" },
+    { "title": "JBL Tune 760NC", "pricePence": 4500, "condition": "good", "platform": "vinted" },
+    { "title": "Beats Studio3 Wireless", "pricePence": 9000, "condition": "fair", "platform": "ebay" }
+  ],
+  "electronics": [
+    { "title": "Anker 65W USB-C charger", "pricePence": 2000, "condition": "like_new", "platform": "ebay" },
+    { "title": "Kindle Paperwhite 11th gen", "pricePence": 7500, "condition": "good", "platform": "vinted" },
+    { "title": "Logitech MX Master 3 mouse", "pricePence": 5000, "condition": "good", "platform": "donedeal" },
+    { "title": "Nintendo Switch Lite", "pricePence": 11000, "condition": "good", "platform": "ebay" },
+    { "title": "Raspberry Pi 4 4GB kit", "pricePence": 5500, "condition": "like_new", "platform": "vinted" }
+  ],
+  "clothing_winter": [
+    { "title": "The North Face Nuptse jacket", "pricePence": 15000, "condition": "good", "platform": "vinted" },
+    { "title": "Patagonia Better Sweater fleece", "pricePence": 6000, "condition": "good", "platform": "vinted" },
+    { "title": "Uniqlo ultra light down jacket", "pricePence": 3000, "condition": "like_new", "platform": "ebay" },
+    { "title": "Barbour wax jacket", "pricePence": 9000, "condition": "fair", "platform": "donedeal" }
+  ],
+  "bikes": [
+    { "title": "Carrera Subway hybrid bike", "pricePence": 18000, "condition": "good", "platform": "donedeal" },
+    { "title": "Brompton folding bike M6L", "pricePence": 75000, "condition": "good", "platform": "ebay" },
+    { "title": "Boardman road bike", "pricePence": 32000, "condition": "fair", "platform": "donedeal" },
+    { "title": "Raleigh city bike with basket", "pricePence": 12000, "condition": "good", "platform": "vinted" }
+  ],
+  "furniture": [
+    { "title": "IKEA Malm desk", "pricePence": 4000, "condition": "good", "platform": "donedeal" },
+    { "title": "IKEA Poäng armchair", "pricePence": 3500, "condition": "good", "platform": "donedeal" },
+    { "title": "Office chair, mesh back", "pricePence": 5000, "condition": "fair", "platform": "ebay" },
+    { "title": "IKEA Kallax 2x4 shelf", "pricePence": 4500, "condition": "like_new", "platform": "donedeal" }
+  ],
+  "textbooks": [
+    { "title": "Campbell Biology 12th ed", "pricePence": 3500, "condition": "good", "platform": "ebay" },
+    { "title": "Introduction to Algorithms (CLRS) 4th ed", "pricePence": 4500, "condition": "like_new", "platform": "ebay" },
+    { "title": "Mankiw Principles of Economics", "pricePence": 2500, "condition": "fair", "platform": "vinted" },
+    { "title": "Atkins Physical Chemistry", "pricePence": 3000, "condition": "good", "platform": "donedeal" }
+  ],
+  "other": [
+    { "title": "Desk lamp LED", "pricePence": 1500, "condition": "good", "platform": "vinted" },
+    { "title": "Electric kettle", "pricePence": 1200, "condition": "good", "platform": "donedeal" },
+    { "title": "Yoga mat", "pricePence": 1000, "condition": "like_new", "platform": "vinted" },
+    { "title": "Board game: Catan", "pricePence": 2000, "condition": "good", "platform": "ebay" }
+  ]
+}

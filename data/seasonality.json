@@ -1,0 +1,9 @@
+{
+  "headphones": { "peakMonths": [11, 12], "lowMonths": [6, 7, 8], "note": "Gifting season lifts demand in Nov-Dec." },
+  "electronics": { "peakMonths": [11, 12], "lowMonths": [6, 7, 8], "note": "Gifting season lifts demand in Nov-Dec." },
+  "clothing_winter": { "peakMonths": [10, 11, 12], "lowMonths": [4, 5, 6, 7], "note": "Winter clothing sells best as the weather turns cold." },
+  "bikes": { "peakMonths": [3, 4, 5, 6], "lowMonths": [11, 12, 1], "note": "Bikes sell best in spring and early summer." },
+  "furniture": { "peakMonths": [8, 9], "lowMonths": [5, 6], "note": "Students furnish rooms at the start of term." },
+  "textbooks": { "peakMonths": [9, 1], "lowMonths": [5, 6, 7], "note": "Demand peaks at the start of each semester." },
+  "other": { "peakMonths": [], "lowMonths": [], "note": "No clear seasonal pattern." }
+}
