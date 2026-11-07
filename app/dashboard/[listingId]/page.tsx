@@ -3,8 +3,9 @@
 import { use, useEffect, useState } from "react";
 import { formatPounds, Label, LINE, SERIF } from "@/app/seller/cards";
 import type { Deal, Listing, Message, TimelineEvent } from "@/lib/types";
+import { NotificationFeed, SavingsGoal, SectionTitle, type CompletedSale } from "./widgets";
 
-type DashboardData = { listing: Listing; events: TimelineEvent[]; deals: Deal[]; messages: Message[] };
+type DashboardData = { listing: Listing; events: TimelineEvent[]; deals: Deal[]; messages: Message[]; completedSales: CompletedSale[] };
 
 const CARD = `rounded-[20px] border ${LINE} bg-[#FBF8F2] p-5 shadow-[0_24px_48px_rgba(59,106,140,0.12)]`;
 const PRIMARY_BTN = "h-12 rounded-3xl bg-[#BAD8EC] px-5 text-sm font-medium tracking-[0.03em] text-[#14212B] hover:bg-[#A8CBE0] disabled:opacity-50";
@@ -28,10 +29,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const humanType = (t: string) => t.replace(/_/g, " ");
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="mb-2 text-[11px] uppercase tracking-[0.22em] text-[#5F6B73]">{children}</div>;
-}
 
 function ApprovalCard({ deal, onDecided }: { deal: Deal; onDecided: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -165,6 +162,10 @@ export default function DashboardPage({ params }: { params: Promise<{ listingId:
               {pending.map((deal) => (
                 <ApprovalCard key={deal.id} deal={deal} onDecided={load} />
               ))}
+
+              <NotificationFeed events={data.events} />
+
+              <SavingsGoal sellerName={data.listing.sellerName} sales={data.completedSales} />
 
               {otherDeals.length > 0 && (
                 <section>

@@ -15,7 +15,22 @@ type ChatEntry =
       pricing?: { estimate: PriceEstimate; trend: TrendAdvice };
       confirm?: { defaultListPrice: number };
       post?: true;
+      error?: { retry?: { photo: File; photoUrl: string; text: string } };
     };
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // same limit as /api/seller/identify
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const IDENTIFY_TIMEOUT_MS = 60_000;
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-1 align-middle" aria-hidden>
+      {[0, 150, 300].map((d) => (
+        <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#5F6B73]" style={{ animationDelay: `${d}ms` }} />
+      ))}
+    </span>
+  );
+}
 
 const GREETING: ChatEntry = {
   from: "agent",
@@ -64,6 +79,10 @@ export default function SellerPage() {
 
   function say(text: string) {
     setChat((c) => [...c, { from: "agent", text }]);
+  }
+
+  function sayError(text: string, retry?: { photo: File; photoUrl: string; text: string }) {
+    setChat((c) => [...c, { from: "agent", text, error: { retry } }]);
   }
 
   // Picks up where the listing is: a draft gets pricing, a priced one gets "Post everywhere",
@@ -116,9 +135,17 @@ export default function SellerPage() {
   }
 
   function pickPhoto(file: File | undefined) {
+    if (fileInput.current) fileInput.current.value = "";
+    if (file && !PHOTO_TYPES.includes(file.type)) {
+      sayError("That file isn't a photo I can read. Use a JPEG, PNG, WebP or GIF.");
+      return;
+    }
+    if (file && file.size > MAX_PHOTO_BYTES) {
+      sayError(`That photo is ${(file.size / 1024 / 1024).toFixed(1)} MB. Please use one under 5 MB.`);
+      return;
+    }
     setPhoto(file ?? null);
     setPhotoPreview(file ? URL.createObjectURL(file) : null);
-    if (fileInput.current) fileInput.current.value = "";
   }
 
   function newListing() {
@@ -141,22 +168,36 @@ export default function SellerPage() {
       return;
     }
 
-    setBusy(true);
-    const form = new FormData();
-    form.append("photo", photo);
-    form.append("text", text);
+    const attempt = { photo, photoUrl: photoPreview ?? "", text };
     setPhoto(null);
     setPhotoPreview(null);
+    await identify(attempt);
+  }
 
+  async function identify(attempt: { photo: File; photoUrl: string; text: string }) {
+    setBusy(true);
+    const form = new FormData();
+    form.append("photo", attempt.photo);
+    form.append("text", attempt.text);
+
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), IDENTIFY_TIMEOUT_MS);
     try {
-      const res = await fetch("/api/seller/identify", { method: "POST", body: form });
-      const data = await res.json();
+      const res = await fetch("/api/seller/identify", { method: "POST", body: form, signal: abort.signal });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) showListing(data.listing as Listing, "Here's what I see.");
-      else say(data.error ?? "Something went wrong.");
+      else sayError(data.error ?? "Something went wrong on my side.", res.status >= 500 ? attempt : undefined);
     } catch {
-      say("Couldn't reach the server. Try again.");
+      sayError(abort.signal.aborted ? "That took too long. Check your connection and try again." : "I couldn't reach the server. Check your connection.", attempt);
     }
+    clearTimeout(timer);
     setBusy(false);
+  }
+
+  function retry(attempt: { photo: File; photoUrl: string; text: string }) {
+    if (busy) return;
+    setChat((c) => [...c, { from: "seller", text: attempt.text ? `${attempt.text} (retry)` : "Retry", photoUrl: attempt.photoUrl }]);
+    identify(attempt);
   }
 
   // Each pricing card only offers Sell now / Wait until "Sell now" has been chosen for that listing.
@@ -193,7 +234,19 @@ export default function SellerPage() {
             ) : (
               <div key={i} className="flex flex-col gap-2.5">
                 <Label>Selly</Label>
-                <p className={`${SERIF} text-[22px] leading-[1.4]`}>{m.text}</p>
+                <p role={m.error ? "alert" : undefined} className={`${SERIF} text-[22px] leading-[1.4] ${m.error ? "text-[#9B3B2E]" : ""}`}>
+                  {m.text}
+                </p>
+                {m.error?.retry && (
+                  <button
+                    type="button"
+                    onClick={() => retry(m.error!.retry!)}
+                    disabled={busy}
+                    className="h-11 self-start rounded-3xl border border-[rgba(30,43,54,0.22)] px-5 text-sm hover:bg-[#FBF8F2] disabled:opacity-50"
+                  >
+                    Try again
+                  </button>
+                )}
                 {m.listing && !m.pricing && !m.confirm && !m.post && <ItemCard listing={m.listing} />}
                 {m.listing && m.post && <PostCard listing={m.listing} onPosted={posted} />}
                 {m.listing && m.pricing && (
@@ -211,13 +264,15 @@ export default function SellerPage() {
           {busy && (
             <div className="flex flex-col gap-2.5">
               <Label>Selly</Label>
-              <p className={`${SERIF} text-[22px] leading-[1.4] text-[#5F6B73]`}>Looking at your photo…</p>
+              <p className={`${SERIF} flex items-center gap-3 text-[22px] leading-[1.4] text-[#5F6B73]`} aria-live="polite">
+                Looking at your photo <TypingDots />
+              </p>
             </div>
           )}
           <div ref={bottom} />
         </section>
 
-        <div className="px-4 pb-6 pt-3">
+        <div className="px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3">
           {photo && photoPreview && (
             <div className={`mb-2 flex items-center gap-3 rounded-2xl border ${LINE} bg-[#FBF8F2] p-2 text-sm`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -236,7 +291,8 @@ export default function SellerPage() {
               type="button"
               onClick={() => fileInput.current?.click()}
               aria-label="Add a photo"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#BAD8EC] text-[#14212B] hover:bg-[#A8CBE0]"
+              disabled={busy}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#BAD8EC] text-[#14212B] hover:bg-[#A8CBE0] disabled:opacity-50"
             >
               <PlusIcon size={20} />
             </button>
@@ -257,7 +313,7 @@ export default function SellerPage() {
               placeholder="e.g. Sony headphones, want £120"
               maxLength={500}
               disabled={busy}
-              className="h-12 min-w-0 flex-1 bg-transparent px-1.5 text-[15px] outline-none placeholder:text-[#6B7479]"
+              className="h-12 min-w-0 flex-1 bg-transparent px-1.5 text-base outline-none placeholder:text-[#6B7479]"
             />
             <button
               type="submit"
