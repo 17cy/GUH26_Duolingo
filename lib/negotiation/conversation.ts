@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { getListing, listMessages } from "@/lib/store";
+import { ensurePaymentLink } from "@/lib/payments/stripe";
+import { getListing, listMessages, readDb } from "@/lib/store";
 import type { Listing } from "@/lib/types";
-import { ensureConversation, findOpenDeal } from "./agent";
+import { ensureConversation } from "./agent";
 import { toPublicDeal, toPublicListing } from "./public";
 
 // Everything the buyer page needs, built only from public serializers.
@@ -14,9 +15,23 @@ export function buyerVisibleListing(id: string): Listing | undefined {
   return listing && (listing.status === "posted" || listing.status === "sold") ? listing : undefined;
 }
 
-export function buyerConversation(listing: Listing, buyerName: string) {
+/** The buyer's most recent deal on this listing, ignoring rejected ones (they keep negotiating). */
+function latestDeal(listingId: string, buyerName: string) {
+  return readDb()
+    .deals.filter((d) => d.listingId === listingId && d.buyerName === buyerName && d.status !== "rejected")
+    .at(-1);
+}
+
+export async function buyerConversation(listing: Listing, buyerName: string) {
   ensureConversation(listing.id, buyerName);
-  const deal = findOpenDeal(listing.id, buyerName);
+
+  // The seller approves on their dashboard (A3); we react here by creating the payment link.
+  const pending = latestDeal(listing.id, buyerName);
+  if (pending?.status === "approved") {
+    await ensurePaymentLink(pending.id).catch((err) => console.error("payment link failed", err));
+  }
+
+  const deal = latestDeal(listing.id, buyerName);
   return {
     listing: toPublicListing(listing),
     messages: listMessages(listing.id, buyerName).map(({ id, from, text, createdAt }) => ({ id, from, text, createdAt })),
