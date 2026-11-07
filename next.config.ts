@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  devIndicators: false, // hide the floating Next.js "N" button in dev; error overlays still show
 };
 
 export default nextConfig;
