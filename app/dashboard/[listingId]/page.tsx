@@ -3,9 +3,9 @@
 import { use, useEffect, useState } from "react";
 import { formatPounds, Label, LINE, SERIF } from "@/app/seller/cards";
 import type { Deal, Listing, Message, TimelineEvent } from "@/lib/types";
-import { NotificationFeed, SavingsGoal, SectionTitle, type CompletedSale } from "./widgets";
+import { NotificationFeed, SectionTitle } from "./widgets";
 
-type DashboardData = { listing: Listing; events: TimelineEvent[]; deals: Deal[]; messages: Message[]; completedSales: CompletedSale[] };
+type DashboardData = { listing: Listing; events: TimelineEvent[]; deals: Deal[]; messages: Message[] };
 
 const CARD = `rounded-[20px] border ${LINE} bg-[#FBF8F2] p-5 shadow-[0_24px_48px_rgba(59,106,140,0.12)]`;
 const PRIMARY_BTN = "h-12 rounded-3xl bg-[#BAD8EC] px-5 text-sm font-medium tracking-[0.03em] text-[#14212B] hover:bg-[#A8CBE0] disabled:opacity-50";
@@ -164,8 +164,6 @@ export default function DashboardPage({ params }: { params: Promise<{ listingId:
               ))}
 
               <NotificationFeed events={data.events} />
-
-              <SavingsGoal sellerName={data.listing.sellerName} sales={data.completedSales} />
 
               {otherDeals.length > 0 && (
                 <section>

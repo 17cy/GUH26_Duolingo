@@ -10,6 +10,9 @@ const TITLE: Partial<Record<EventType, string>> = {
   injection_attempt: "Suspicious message ignored",
   deal_proposed: "Deal agreed",
   payment_held: "Payment held",
+  pickup_scheduled: "Pickup booked",
+  shipment_created: "Sent by locker",
+  tracking_update: "Delivery update",
   handed_over: "Handed over",
   sold: "Sold",
 };

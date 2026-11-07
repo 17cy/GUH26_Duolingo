@@ -187,10 +187,12 @@ function stateInstruction(listing: Listing, offer: number | null, countersMade: 
     if (d.action === "accept") {
       return `The buyer offered ${gbp(offer)}. Decision: ACCEPT at ${gbp(d.pricePence)}. Call accept_offer with price ${d.pricePence}. Say a secure payment link will appear here in a moment.`;
     }
-    return `The buyer offered ${gbp(offer)}. Decision: COUNTER at ${gbp(d.pricePence)}${d.final ? " — this is the final price, say so" : ""}. Call make_counter with price ${d.pricePence}.`;
+    return `The buyer offered ${gbp(offer)}. Decision: COUNTER at ${gbp(d.pricePence)}${
+      d.final ? " — this is the final price, say so" : ". There is still room to negotiate: do not call it your best, lowest or final price"
+    }. Call make_counter with price ${d.pricePence}.`;
   }
   const ask = lastCounter ?? listing.listPrice!;
-  return `No offer in this message. Current asking price: ${gbp(ask)}. If the buyer clearly agrees to buy at that price (e.g. "deal", "I'll take it"), call accept_offer with price ${ask}. If they ask for your best price, call make_counter with price ${ask}. Otherwise just answer.`;
+  return `No offer in this message. Current asking price: ${gbp(ask)}. If the buyer clearly agrees to buy at that price (e.g. "deal", "I'll take it"), call accept_offer with price ${ask}. If they ask for your best price, call make_counter with price ${ask} and invite them to make an offer; do not call it your best, lowest or final price. Otherwise just answer.`;
 }
 
 // ---------- applying the decision ----------
@@ -247,7 +249,7 @@ export async function handleBuyerMessage(listing: Listing, buyerName: string, ra
 
   const openDeal = findOpenDeal(L, buyerName);
   const { countersMade, lastCounterPence } = negotiationState(L, buyerName);
-  const offerPence = openDeal ? null : parseOfferPence(scam.sanitized);
+  const offerPence = openDeal ? null : parseOfferPence(scam.sanitized, listing.listPrice);
 
   const state = stateInstruction(listing, offerPence, countersMade, lastCounterPence, openDeal);
   const market = marketFacts(listing);
@@ -299,7 +301,8 @@ export async function handleBuyerMessage(listing: Listing, buyerName: string, ra
   const toolMatches = expected ? reply?.tool?.name === expected : reply?.tool === null || reply?.tool?.name === "decline";
   let text = "";
   if (reply && reply.text && toolMatches) {
-    const filtered = filterAgentText(reply.text, { allowedPence: allowed, forbiddenPence: forbidden, allowedUrls: [] });
+    const finalAllowed = resolved.kind === "counter" && resolved.final;
+    const filtered = filterAgentText(reply.text, { allowedPence: allowed, forbiddenPence: forbidden, allowedUrls: [], finalAllowed });
     const mentionsPrice = price === undefined || filtered.text.includes(gbp(price));
     if (filtered.ok && filtered.text && mentionsPrice) text = filtered.text;
   }

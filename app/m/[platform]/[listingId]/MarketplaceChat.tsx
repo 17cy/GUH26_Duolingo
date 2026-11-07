@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentText, DEAL_STATUS } from "@/app/buy/AgentText";
 import { HandoffChoice, TrackingSteps, type HandoffOptions } from "@/app/buy/Delivery";
 import type { PublicDeal } from "@/lib/negotiation/public";
+import type { Platform } from "@/lib/types";
 
 // The marketplace's own "Message seller" box (mock, neutral styling). Talks to Person B's buyer APIs
 // (/api/buyer/conversation, /api/buyer/chat), which do the negotiation, scam checks and public-only data.
@@ -30,8 +31,21 @@ function readName(id: string): string {
   }
 }
 
-export default function MarketplaceChat({ listingId, sellerName, platformName }: { listingId: string; sellerName: string; platformName: string }) {
-  const [open, setOpen] = useState(false);
+export default function MarketplaceChat({
+  listingId,
+  sellerName,
+  platform,
+  platformName,
+  returnedFromCheckout,
+}: {
+  listingId: string;
+  sellerName: string;
+  platform: Platform;
+  platformName: string;
+  /** "paid" / "cancelled" when Stripe Checkout sent the buyer back here (?chat=1); opens the chat. */
+  returnedFromCheckout?: "paid" | "cancelled";
+}) {
+  const [open, setOpen] = useState(returnedFromCheckout !== undefined);
   const [name, setName] = useState("");
   const [nameDraft, setNameDraft] = useState("");
   const [convo, setConvo] = useState<Conversation | null>(null);
@@ -45,13 +59,15 @@ export default function MarketplaceChat({ listingId, sellerName, platformName }:
 
   const load = useCallback(async () => {
     if (!name) return;
-    const res = await fetch(`/api/buyer/conversation?listingId=${encodeURIComponent(listingId)}&buyer=${encodeURIComponent(name)}`);
+    const res = await fetch(
+      `/api/buyer/conversation?listingId=${encodeURIComponent(listingId)}&buyer=${encodeURIComponent(name)}&from=${platform}`,
+    );
     const data = await res.json();
     if (res.ok) {
       setConvo(data);
       setError(null);
     } else setError(data.error ?? "Something went wrong.");
-  }, [listingId, name]);
+  }, [listingId, name, platform]);
 
   // Poll every 2s while the message box is open (seller approval, payment updates).
   useEffect(() => {
@@ -65,6 +81,11 @@ export default function MarketplaceChat({ listingId, sellerName, platformName }:
   useEffect(() => {
     if (open) bottom.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [open, count, busy]);
+
+  // Back from Stripe Checkout: bring the open chat into view.
+  useEffect(() => {
+    if (returnedFromCheckout) setTimeout(() => panel.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+  }, [returnedFromCheckout]);
 
   function openBox() {
     setOpen(true);
@@ -92,7 +113,7 @@ export default function MarketplaceChat({ listingId, sellerName, platformName }:
       const res = await fetch("/api/buyer/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ listingId, buyerName: name, text: msg }),
+        body: JSON.stringify({ listingId, buyerName: name, text: msg, from: platform }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -154,6 +175,9 @@ export default function MarketplaceChat({ listingId, sellerName, platformName }:
               <span className="font-semibold">Deal at {gbp(convo.deal.price)}</span> · {DEAL_STATUS[convo.deal.status] ?? convo.deal.status}
               {convo.deal.pickupSlot && convo.deal.status === "payment_held" && <div className="mt-0.5">Pickup: {convo.deal.pickupSlot}</div>}
             </div>
+          )}
+          {returnedFromCheckout === "paid" && convo?.deal?.status === "awaiting_payment" && (
+            <div className="border-b border-neutral-200 px-4 py-2 text-xs text-neutral-600">Payment submitted — confirming with Stripe…</div>
           )}
           {(convo?.handoffOptions || convo?.deal?.tracking) && (
             <div className="border-b border-neutral-200 p-3">

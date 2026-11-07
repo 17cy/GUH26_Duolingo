@@ -11,8 +11,17 @@ export const dynamic = "force-dynamic";
 const PLATFORM_NAME: Record<Platform, string> = { ebay: "eBay", vinted: "Vinted", donedeal: "DoneDeal" };
 const CONDITION_LABEL: Record<Condition, string> = { new: "New", like_new: "Like new", good: "Good", fair: "Fair", poor: "Poor" };
 
-export default async function MockMarketplacePage({ params }: { params: Promise<{ platform: string; listingId: string }> }) {
+export default async function MockMarketplacePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ platform: string; listingId: string }>;
+  searchParams: Promise<{ chat?: string; paid?: string }>;
+}) {
   const { platform, listingId } = await params;
+  const { chat, paid } = await searchParams;
+  // Stripe Checkout returns here with ?chat=1 (&paid=1 on success), so reopen the buyer's chat.
+  const returnedFromCheckout = chat === "1" ? (paid === "1" ? "paid" : "cancelled") : undefined;
   if (!(platform in PLATFORM_NAME)) notFound();
   const name = PLATFORM_NAME[platform as Platform];
 
@@ -54,7 +63,13 @@ export default async function MockMarketplacePage({ params }: { params: Promise<
               </dl>
               {listing.description && <p className="text-sm text-neutral-700">{listing.description}</p>}
               <p className="text-xs text-neutral-500">Messages are answered by Selly, an AI assistant selling on the owner&apos;s behalf.</p>
-              <MarketplaceChat listingId={listing.id} sellerName={listing.sellerName} platformName={name} />
+              <MarketplaceChat
+                listingId={listing.id}
+                sellerName={listing.sellerName}
+                platform={platform as Platform}
+                platformName={name}
+                returnedFromCheckout={returnedFromCheckout}
+              />
             </div>
           </div>
         )}

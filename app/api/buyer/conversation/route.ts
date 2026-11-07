@@ -1,4 +1,4 @@
-import { BuyerName, buyerConversation, buyerVisibleListing } from "@/lib/negotiation/conversation";
+import { BuyerName, BuyerPlatform, buyerConversation, buyerVisibleListing } from "@/lib/negotiation/conversation";
 
 export const runtime = "nodejs";
 
@@ -9,5 +9,5 @@ export async function GET(req: Request) {
   if (!listing) return Response.json({ error: "Listing not found" }, { status: 404 });
   const buyer = BuyerName.safeParse(url.searchParams.get("buyer") ?? "");
   if (!buyer.success) return Response.json({ error: "Enter your name to start chatting" }, { status: 400 });
-  return Response.json(await buyerConversation(listing, buyer.data));
+  return Response.json(await buyerConversation(listing, buyer.data, BuyerPlatform.parse(url.searchParams.get("from") ?? undefined)));
 }

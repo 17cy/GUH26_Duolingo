@@ -73,6 +73,13 @@ describe("checkoutSessionParams", () => {
     expect(minutes).toBeGreaterThanOrEqual(30);
     expect(minutes).toBeLessThan(32);
     expect(p.success_url).toBe("http://localhost:3000/buy/seed-sony?paid=1");
+    expect(p.cancel_url).toBe("http://localhost:3000/buy/seed-sony");
+  });
+
+  it("returns the buyer to the marketplace page they chatted on, with the chat open", () => {
+    const p = checkoutSessionParams(deal(), "Sony WH-1000XM4", "http://localhost:3000", Date.now(), "vinted");
+    expect(p.success_url).toBe("http://localhost:3000/m/vinted/seed-sony?chat=1&paid=1");
+    expect(p.cancel_url).toBe("http://localhost:3000/m/vinted/seed-sony?chat=1");
   });
 });
 
@@ -86,6 +93,13 @@ describe("ensurePaymentLink", () => {
     expect(getDeal("deal1")).toMatchObject({ status: "awaiting_payment", stripeSessionId: "cs_test_1" });
     expect(listMessages("seed-sony", "Sam").filter((m) => m.text.includes("checkout.stripe.com"))).toHaveLength(1);
     expect(listEvents("seed-sony").map((e) => e.type)).toContain("payment_link_sent");
+  });
+
+  it("uses the marketplace return page when the link is created from a marketplace chat", async () => {
+    deal();
+    const stripe = fakeStripe();
+    await ensurePaymentLink("deal1", stripe, "donedeal");
+    expect(JSON.stringify(stripe.calls.create[0])).toContain("/m/donedeal/seed-sony?chat=1&paid=1");
   });
 
   it("does nothing before seller approval", async () => {

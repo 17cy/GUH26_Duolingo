@@ -163,8 +163,7 @@ export interface TimelineEvent {
 2. **Pricing**: show low / typical / high, where the wanted price sits, trend advice, payout breakdown.
 3. **Seller confirms** list price, floor price (default 80% of list), style → status `priced`.
 4. **Post everywhere** (mocked) → status `posted`, one `posted` event per platform.
-5. **Dashboard**: timeline, buyer conversations (read-only), approval card (fallback only), notification feed,
-   savings goal.
+5. **Dashboard**: timeline, buyer conversations (read-only), approval card (fallback only), notification feed.
 
 ## Pricing
 
@@ -221,14 +220,12 @@ and the agent tells the buyer politely and continues negotiating.
 ## Notifications
 
 The dashboard feed shows events of type: offer_received, lowball_declined, scam_flagged,
-injection_attempt, deal_proposed, payment_held, handed_over, sold. Lowball offers are summarised
-("3 lowball offers declined"), not pushed one by one.
+injection_attempt, deal_proposed, payment_held, pickup_scheduled, shipment_created, tracking_update,
+handed_over, sold. Lowball offers are summarised ("3 lowball offers declined"), not pushed one by one.
 
-## Savings goal
-
-Seller sets a goal amount and split (default 70% save / 30% spend). On `completed`, the net
-proceeds are split into two simulated pots and a progress bar shows the goal. Labelled
-"simulated".
+The seller chat also reports each live listing's deal as it happens: deal agreed (auto-approved),
+payment held, pickup booked (with a link to the handoff QR), locker shipment and each tracking step,
+sold, and cancelled.
 
 ---
 
@@ -366,8 +363,7 @@ On `completed`: one `delisted` event per platform in `listing.platforms`.
 5. Judge offers £100 → counter £133 → judge offers £115 → accepted.
 6. Deal is auto-approved (at or above the floor) → payment link appears at once → judge pays with
    4242 → "payment held".
-7. Seller shows QR → judge scans → captured → sold → delisted everywhere → savings goal bar
-   moves by the saved share.
+7. Seller shows QR → judge scans → captured → sold → delisted everywhere.
 
 ## Out of scope
 

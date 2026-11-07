@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { estimatePrice, type PriceEstimate } from "@/lib/pricing/estimate";
 import { trendAdvice, type TrendAdvice } from "@/lib/pricing/trend";
-import type { Listing } from "@/lib/types";
+import type { Deal, Listing, TimelineEvent } from "@/lib/types";
 import { ConfirmCard, formatPounds, ItemCard, Label, LINE, PostCard, PricingCard, SERIF } from "./cards";
+import { sellerUpdate } from "./updates";
 
 type ChatEntry =
   | { from: "seller"; text: string; photoUrl?: string }
@@ -16,6 +17,7 @@ type ChatEntry =
       confirm?: { defaultListPrice: number };
       post?: true;
       error?: { retry?: { photo: File; photoUrl: string; text: string } };
+      link?: { href: string; label: string };
     };
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // same limit as /api/seller/identify
@@ -34,7 +36,7 @@ function TypingDots() {
 
 const GREETING: ChatEntry = {
   from: "agent",
-  text: "Hi! Tap + to add a photo of what you'd like to sell, and tell me a bit about it. Add a price if you have one in mind, e.g. “want £120”.",
+  text: "Hi! Tap + to add a photo of what you'd like to sell, and tell me a bit about it. Add a price if you have one in mind, e.g. “want £67”.",
 };
 
 // Starting list price for the confirm step: the seller's own price unless it's above market.
@@ -60,12 +62,55 @@ export default function SellerPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [watching, setWatching] = useState<string[]>([]); // live listings whose deal updates Selly reports here
+  const seen = useRef(new Map<string, Set<string>>());
   const fileInput = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, busy]);
+
+  // Poll every 2s for each live listing and tell the seller about deal progress as it happens.
+  // Events that already existed when we started watching are not replayed.
+  useEffect(() => {
+    if (!watching.length) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      for (const id of watching) {
+        try {
+          const res = await fetch(`/api/seller/events?listingId=${encodeURIComponent(id)}`, { cache: "no-store" });
+          if (!res.ok) continue;
+          const { events, deals } = (await res.json()) as { events: TimelineEvent[]; deals: Deal[] };
+          const known = seen.current.get(id);
+          if (!known) {
+            seen.current.set(id, new Set(events.map((e) => e.id)));
+            continue;
+          }
+          const fresh = events.filter((e) => !known.has(e.id));
+          fresh.forEach((e) => known.add(e.id));
+          const updates = fresh.flatMap((e) => {
+            const u = sellerUpdate(e, deals.find((d) => d.id === e.data?.dealId));
+            return u ? [{ from: "agent" as const, text: u.text, link: u.link }] : [];
+          });
+          if (updates.length && !stopped) setChat((c) => [...c, ...updates]);
+        } catch {
+          // offline for a moment; try again next tick
+        }
+      }
+      if (!stopped) timer = setTimeout(tick, 2000);
+    };
+    tick();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [watching]);
+
+  function watch(listingId: string) {
+    setWatching((w) => (w.includes(listingId) ? w : [...w, listingId]));
+  }
 
   // /seller?listing=<id> reopens an existing listing (e.g. the seed item) in the chat.
   useEffect(() => {
@@ -75,6 +120,7 @@ export default function SellerPage() {
       .then((r) => r.json())
       .then((data) => (data.listing ? showListing(data.listing as Listing, "Here's your listing.") : say(data.error ?? "Listing not found.")))
       .catch(() => say("Couldn't load that listing."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when the page opens
   }, []);
 
   function say(text: string) {
@@ -100,6 +146,7 @@ export default function SellerPage() {
       return { from: "agent", text: listing.status === "sold" ? "This one has sold." : "This listing has been withdrawn." };
     })();
     setChat((c) => [...c, { from: "agent", text: intro, listing }, ...(next ? [next] : [])]);
+    if (listing.status === "posted") watch(listing.id);
   }
 
   function choose(entryIndex: number, choice: "sell_now" | "wait") {
@@ -130,8 +177,9 @@ export default function SellerPage() {
     ]);
   }
 
-  function posted() {
-    say("Posted. I'll handle buyers from here, and you can follow everything on your dashboard.");
+  function posted(listing: Listing) {
+    say("Posted. I'll handle buyers from here and tell you here when a deal is agreed, paid and on its way.");
+    watch(listing.id);
   }
 
   function pickPhoto(file: File | undefined) {
@@ -151,6 +199,8 @@ export default function SellerPage() {
   function newListing() {
     if (busy) return;
     setChat([GREETING]);
+    setWatching([]);
+    seen.current.clear();
     pickPhoto(undefined);
     setText("");
     window.history.replaceState(null, "", "/seller");
@@ -237,6 +287,16 @@ export default function SellerPage() {
                 <p role={m.error ? "alert" : undefined} className={`${SERIF} text-[22px] leading-[1.4] ${m.error ? "text-[#9B3B2E]" : ""}`}>
                   {m.text}
                 </p>
+                {m.link && (
+                  <a
+                    href={m.link.href}
+                    target={m.link.href.startsWith("/handoff/") ? "_blank" : undefined}
+                    rel="noreferrer"
+                    className="flex h-11 items-center self-start rounded-3xl bg-[#BAD8EC] px-5 text-sm font-medium text-[#14212B] hover:bg-[#A8CBE0]"
+                  >
+                    {m.link.label}
+                  </a>
+                )}
                 {m.error?.retry && (
                   <button
                     type="button"
