@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentText, DEAL_STATUS } from "@/app/buy/AgentText";
+import { HandoffChoice, TrackingSteps, type HandoffOptions } from "@/app/buy/Delivery";
 import type { PublicDeal } from "@/lib/negotiation/public";
 
 // The marketplace's own "Message seller" box (mock, neutral styling). Talks to Person B's buyer APIs
@@ -15,6 +16,7 @@ interface ChatMessage {
 interface Conversation {
   messages: ChatMessage[];
   deal: PublicDeal | null;
+  handoffOptions: HandoffOptions | null; // present only while the buyer must choose pickup or locker
 }
 
 const gbp = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
@@ -150,6 +152,15 @@ export default function MarketplaceChat({ listingId, sellerName, platformName }:
           {convo?.deal && (
             <div className="border-b border-neutral-200 bg-amber-50 px-4 py-2 text-sm">
               <span className="font-semibold">Deal at {gbp(convo.deal.price)}</span> · {DEAL_STATUS[convo.deal.status] ?? convo.deal.status}
+              {convo.deal.pickupSlot && convo.deal.status === "payment_held" && <div className="mt-0.5">Pickup: {convo.deal.pickupSlot}</div>}
+            </div>
+          )}
+          {(convo?.handoffOptions || convo?.deal?.tracking) && (
+            <div className="border-b border-neutral-200 p-3">
+              {convo.handoffOptions && (
+                <HandoffChoice listingId={listingId} buyerName={name} options={convo.handoffOptions} onUpdate={(c) => setConvo(c as Conversation)} />
+              )}
+              {convo.deal?.tracking && <TrackingSteps tracking={convo.deal.tracking} />}
             </div>
           )}
           <div className="flex max-h-[420px] min-h-[200px] flex-col gap-2 overflow-y-auto bg-neutral-100 p-3">
