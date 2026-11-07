@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PublicDeal, PublicListing } from "@/lib/negotiation/public";
 import type { Item } from "@/lib/types";
+import { AgentText, DEAL_STATUS } from "../AgentText";
 
 // Selly design tokens (shared with app/seller): cream #F6F0E6 · card #FBF8F2 · ink #1E2B36 ·
 // muted #5F6B73 · blue #BAD8EC · deep blue #3B6A8C
@@ -22,37 +23,6 @@ interface Conversation {
 }
 
 const CONDITION: Record<Item["condition"], string> = { new: "New", like_new: "Like new", good: "Good", fair: "Fair", poor: "Poor" };
-const DEAL_STATUS: Partial<Record<PublicDeal["status"], string>> = {
-  awaiting_seller_approval: "Waiting for the seller to approve",
-  approved: "Approved — preparing your secure payment link",
-  awaiting_payment: "Waiting for your payment",
-  payment_held: "Payment held safely until handoff",
-  in_delivery: "On its way",
-  completed: "Handed over — payment released to the seller",
-  cancelled: "Cancelled — any held payment was released",
-};
-
-// Only our Stripe Checkout links are ever rendered as links.
-const CHECKOUT_URL = /https:\/\/checkout\.stripe\.com\/\S+/;
-
-function AgentText({ text }: { text: string }) {
-  const match = text.match(CHECKOUT_URL);
-  if (!match) return <>{text}</>;
-  const url = match[0].replace(/[.,!?)]+$/, "");
-  const [before, after] = text.split(url);
-  return (
-    <>
-      {before.replace(/\s*here:\s*$/, ".")}
-      <a
-        href={url}
-        className="my-3 flex h-12 items-center justify-center rounded-full bg-[#3B6A8C] font-[family-name:var(--font-ui),system-ui,sans-serif] text-[15px] text-white"
-      >
-        Pay securely with Stripe
-      </a>
-      {after.replace(/^\s*—\s*/, "")}
-    </>
-  );
-}
 
 const gbp = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
 const storageKey = (id: string) => `selly-buyer-${id}`;
