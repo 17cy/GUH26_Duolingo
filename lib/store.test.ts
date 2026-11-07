@@ -8,7 +8,7 @@ import { getListing, listListings, saveListing } from "./store";
 let dir: string;
 
 beforeEach(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), "flipagent-"));
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), "selly-"));
   process.env.DB_PATH = path.join(dir, "db.json");
 });
 
