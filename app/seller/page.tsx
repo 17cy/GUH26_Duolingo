@@ -1,39 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Item, Listing } from "@/lib/types";
-
-// Design tokens from the Selly design (Selly Chat.html).
-// cream #F6F0E6 · card #FBF8F2 · ink #1E2B36 · bubble ink #14212B · muted #5F6B73 · blue #BAD8EC · deep blue #3B6A8C
-const SERIF = "font-[family-name:var(--font-serif),Georgia,serif]";
-const LINE = "border-[rgba(30,43,54,0.1)]";
+import { estimatePrice, type PriceEstimate } from "@/lib/pricing/estimate";
+import { trendAdvice, type TrendAdvice } from "@/lib/pricing/trend";
+import type { Listing } from "@/lib/types";
+import { ConfirmCard, formatPounds, ItemCard, Label, LINE, PricingCard, SERIF } from "./cards";
 
 type ChatEntry =
   | { from: "seller"; text: string; photoUrl?: string }
-  | { from: "agent"; text: string; listing?: Listing };
+  | { from: "agent"; text: string; listing?: Listing; pricing?: { estimate: PriceEstimate; trend: TrendAdvice }; confirm?: { defaultListPrice: number } };
 
 const GREETING: ChatEntry = {
   from: "agent",
   text: "Hi! Tap + to add a photo of what you'd like to sell, and tell me a bit about it. Add a price if you have one in mind, e.g. “want £120”.",
 };
 
-const CONDITION_LABEL: Record<Item["condition"], string> = {
-  new: "New",
-  like_new: "Like new",
-  good: "Good",
-  fair: "Fair",
-  poor: "Poor",
-};
-
-// Confidence is how sure the model is of the exact product (not just the type of item).
-function confidenceNote(confidence: number): string {
-  if (confidence >= 0.85) return "I'm confident this is the exact model.";
-  if (confidence >= 0.6) return "The brand and type are clear, but the exact model is a best guess. A close-up of the label or model number would help.";
-  return "I'm not sure what this is exactly. Try a clearer photo or tell me the model.";
-}
-
-function formatPounds(pence: number): string {
-  return `£${(pence / 100).toFixed(pence % 100 === 0 ? 0 : 2)}`;
+// Starting list price for the confirm step: the seller's own price unless it's above market.
+function defaultListPrice(listing: Listing, estimate: PriceEstimate | null): number {
+  if (!estimate) return listing.wantedPrice ?? 0;
+  const w = estimate.wanted;
+  if (!w) return estimate.typical;
+  return w.position === "above" ? w.suggestedPrice! : w.price;
 }
 
 function PlusIcon({ size }: { size: number }) {
@@ -42,51 +29,6 @@ function PlusIcon({ size }: { size: number }) {
       <path d="M12 5v14" />
       <path d="M5 12h14" />
     </svg>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] uppercase tracking-[0.24em] text-[#3B6A8C]">{children}</div>;
-}
-
-function Row({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
-  return (
-    <div className={`flex items-baseline justify-between gap-3 border-t ${last ? "border-b" : ""} ${LINE} py-3 text-sm`}>
-      <span className="shrink-0 text-[#5F6B73]">{label}</span>
-      <span className="text-right">{children}</span>
-    </div>
-  );
-}
-
-function ItemCard({ listing }: { listing: Listing }) {
-  const { item } = listing;
-  const brandModel = [item.brand, item.model].filter(Boolean).join(" · ");
-  const pct = Math.round(item.confidence * 100);
-  return (
-    <div className={`rounded-[20px] border ${LINE} bg-[#FBF8F2] p-5 shadow-[0_24px_48px_rgba(59,106,140,0.12)]`}>
-      <div className="text-[11px] uppercase tracking-[0.22em] text-[#5F6B73]">Draft listing</div>
-      <div className={`${SERIF} mt-1.5 text-[28px] font-medium leading-tight`}>{item.name}</div>
-      <div className="mt-3.5 flex flex-col">
-        {brandModel && <Row label="Brand / model">{brandModel}</Row>}
-        <Row label="Condition">{CONDITION_LABEL[item.condition]}</Row>
-        <Row label="Defects">{item.defects.length ? item.defects.join(", ") : "None spotted"}</Row>
-        {listing.wantedPrice !== undefined && (
-          <Row label="Asking price">
-            <span className={`${SERIF} text-[22px] font-medium leading-none`}>{formatPounds(listing.wantedPrice)}</span>
-          </Row>
-        )}
-        <div className={`border-t border-b ${LINE} py-3 text-sm`}>
-          <div className="flex items-center gap-3">
-            <span className="shrink-0 text-[#5F6B73]">Match confidence</span>
-            <div className="h-1 flex-1 rounded-full bg-[rgba(30,43,54,0.1)]">
-              <div className="h-1 rounded-full bg-[#3B6A8C]" style={{ width: `${pct}%` }} />
-            </div>
-            <span>{pct}%</span>
-          </div>
-          <p className="mt-2 text-[13px] leading-relaxed text-[#5F6B73]">{confidenceNote(item.confidence)}</p>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -103,6 +45,54 @@ export default function SellerPage() {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, busy]);
 
+  // /seller?listing=<id> reopens an existing listing (e.g. the seed item) in the chat.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("listing");
+    if (!id) return;
+    fetch(`/api/seller/listings/${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((data) => (data.listing ? showListing(data.listing as Listing, "Here's your listing.") : say(data.error ?? "Listing not found.")))
+      .catch(() => say("Couldn't load that listing."));
+  }, []);
+
+  function say(text: string) {
+    setChat((c) => [...c, { from: "agent", text }]);
+  }
+
+  function showListing(listing: Listing, intro: string) {
+    const estimate = estimatePrice(listing.item, { wantedPrice: listing.wantedPrice });
+    const trend = trendAdvice(listing.item.category);
+    setChat((c) => [
+      ...c,
+      { from: "agent", text: intro, listing },
+      estimate
+        ? { from: "agent", text: "Here's what similar items go for.", listing, pricing: { estimate, trend } }
+        : { from: "agent", text: "I couldn't find similar items to compare, so set a price you're happy with.", listing, confirm: { defaultListPrice: defaultListPrice(listing, null) } },
+    ]);
+  }
+
+  function choose(entryIndex: number, choice: "sell_now" | "wait") {
+    const entry = chat[entryIndex];
+    if (entry.from !== "agent" || !entry.listing || !entry.pricing) return;
+    const { listing, pricing } = entry;
+    setChat((c) => [
+      ...c,
+      { from: "seller", text: choice === "sell_now" ? "Sell now" : "Wait" },
+      choice === "sell_now"
+        ? { from: "agent", text: "Great. Confirm your price and how hard I should negotiate.", listing, confirm: { defaultListPrice: defaultListPrice(listing, pricing.estimate) } }
+        : {
+            from: "agent",
+            text: `No problem, your draft is saved. ${pricing.trend.waitUntil ? `Check back around ${pricing.trend.waitUntil}, or` : "Tap"} “Sell now” above whenever you're ready.`,
+          },
+    ]);
+  }
+
+  function priced(listing: Listing) {
+    say(
+      `Done. Listed at ${formatPounds(listing.listPrice!)} with a ${formatPounds(listing.floorPrice!)} floor that buyers never see. Next, I'll post it everywhere.`,
+    );
+  }
+
   function pickPhoto(file: File | undefined) {
     setPhoto(file ?? null);
     setPhotoPreview(file ? URL.createObjectURL(file) : null);
@@ -114,6 +104,7 @@ export default function SellerPage() {
     setChat([GREETING]);
     pickPhoto(undefined);
     setText("");
+    window.history.replaceState(null, "", "/seller");
   }
 
   async function send(e: React.FormEvent) {
@@ -124,7 +115,7 @@ export default function SellerPage() {
     setText("");
 
     if (!photo) {
-      setChat((c) => [...c, { from: "agent", text: "Tap + to add a photo of the item and I'll identify it." }]);
+      say("Tap + to add a photo of the item and I'll identify it.");
       return;
     }
 
@@ -138,17 +129,16 @@ export default function SellerPage() {
     try {
       const res = await fetch("/api/seller/identify", { method: "POST", body: form });
       const data = await res.json();
-      setChat((c) => [
-        ...c,
-        res.ok
-          ? { from: "agent", text: "Here's what I see.", listing: data.listing as Listing }
-          : { from: "agent", text: data.error ?? "Something went wrong." },
-      ]);
+      if (res.ok) showListing(data.listing as Listing, "Here's what I see.");
+      else say(data.error ?? "Something went wrong.");
     } catch {
-      setChat((c) => [...c, { from: "agent", text: "Couldn't reach the server. Try again." }]);
+      say("Couldn't reach the server. Try again.");
     }
     setBusy(false);
   }
+
+  // Each pricing card only offers Sell now / Wait until "Sell now" has been chosen for that listing.
+  const sellNowChosen = new Set(chat.flatMap((m) => (m.from === "agent" && m.confirm && m.listing ? [m.listing.id] : [])));
 
   return (
     <div className="min-h-dvh bg-[#F6F0E6] font-[family-name:var(--font-ui),system-ui,sans-serif] text-[#1E2B36]">
@@ -171,7 +161,7 @@ export default function SellerPage() {
         <section aria-label="Conversation" className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 pb-4 pt-6">
           {chat.map((m, i) =>
             m.from === "seller" ? (
-              <div key={i} className="flex w-full max-w-[280px] flex-col gap-2.5 self-end rounded-[20px] bg-[#BAD8EC] p-3">
+              <div key={i} className="flex w-fit min-w-24 max-w-[280px] flex-col gap-2.5 self-end rounded-[20px] bg-[#BAD8EC] p-3">
                 {m.photoUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.photoUrl} alt="Photo of the item" className="max-h-56 w-full rounded-xl object-cover" />
@@ -182,7 +172,16 @@ export default function SellerPage() {
               <div key={i} className="flex flex-col gap-2.5">
                 <Label>Selly</Label>
                 <p className={`${SERIF} text-[22px] leading-[1.4]`}>{m.text}</p>
-                {m.listing && <ItemCard listing={m.listing} />}
+                {m.listing && !m.pricing && !m.confirm && <ItemCard listing={m.listing} />}
+                {m.listing && m.pricing && (
+                  <PricingCard
+                    estimate={m.pricing.estimate}
+                    trend={m.pricing.trend}
+                    chosen={sellNowChosen.has(m.listing.id)}
+                    onChoose={(choice) => choose(i, choice)}
+                  />
+                )}
+                {m.listing && m.confirm && <ConfirmCard listing={m.listing} defaultListPrice={m.confirm.defaultListPrice} onConfirmed={priced} />}
               </div>
             ),
           )}
