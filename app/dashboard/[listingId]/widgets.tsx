@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { formatPounds, LINE, SERIF } from "@/app/seller/cards";
-import { splitProceeds } from "@/lib/pricing/payout";
+import { LINE } from "@/app/seller/cards";
 import { buildFeed, newNotifications, type FeedItem } from "../feed";
 import type { TimelineEvent } from "@/lib/types";
 
@@ -135,135 +134,6 @@ export function NotificationFeed({ events }: { events: TimelineEvent[] }) {
           </div>
         ))}
       </div>
-    </section>
-  );
-}
-
-// ---------- Savings goal (simulated pots) ----------
-
-export interface CompletedSale {
-  dealId: string;
-  listingId: string;
-  itemName: string;
-  price: number;
-  net: number;
-}
-
-type Goal = { goal: number; savePct: number };
-const DEFAULT_GOAL: Goal = { goal: 50000, savePct: 70 };
-const goalKey = (seller: string) => `selly-savings-goal-${seller}`;
-
-function readGoal(seller: string): Goal {
-  try {
-    const g = JSON.parse(localStorage.getItem(goalKey(seller)) ?? "null");
-    if (g && Number.isInteger(g.goal) && g.goal > 0 && g.savePct >= 0 && g.savePct <= 100) return g;
-  } catch {}
-  return DEFAULT_GOAL;
-}
-
-export function SavingsGoal({ sellerName, sales }: { sellerName: string; sales: CompletedSale[] }) {
-  const [goal, setGoal] = useState<Goal>(DEFAULT_GOAL);
-  const [editing, setEditing] = useState(false);
-  const [goalText, setGoalText] = useState("500");
-  const [pct, setPct] = useState(70);
-
-  useEffect(() => {
-    const g = readGoal(sellerName);
-    setGoal(g);
-    setGoalText(String(g.goal / 100));
-    setPct(g.savePct);
-  }, [sellerName]);
-
-  const total = sales.reduce((s, x) => s + x.net, 0);
-  const { save, spend } = splitProceeds(total, goal.savePct);
-  const progress = Math.min(100, (save / goal.goal) * 100);
-  const goalPence = /^\d{1,6}$/.test(goalText.trim()) ? Number(goalText.trim()) * 100 : 0;
-
-  function saveGoal(e: React.FormEvent) {
-    e.preventDefault();
-    if (goalPence <= 0) return;
-    const g = { goal: goalPence, savePct: pct };
-    setGoal(g);
-    try {
-      localStorage.setItem(goalKey(sellerName), JSON.stringify(g));
-    } catch {}
-    setEditing(false);
-  }
-
-  return (
-    <section>
-      <SectionTitle
-        right={
-          <span className="rounded-full border border-[rgba(30,43,54,0.22)] px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-[#5F6B73]">Simulated</span>
-        }
-      >
-        Savings goal
-      </SectionTitle>
-      <div className={CARD}>
-        {editing ? (
-          <form onSubmit={saveGoal} className="flex flex-col gap-4 text-sm">
-            <label>
-              <span className="text-[#5F6B73]">Emergency fund goal</span>
-              <div className="relative mt-1">
-                <span className={`${SERIF} absolute left-2.5 top-1/2 -translate-y-1/2 text-[22px]`}>£</span>
-                <input
-                  value={goalText}
-                  onChange={(e) => setGoalText(e.target.value)}
-                  inputMode="numeric"
-                  className={`${SERIF} h-11 w-full rounded-xl border border-[rgba(30,43,54,0.22)] bg-white/60 pl-7 pr-2 text-[22px] outline-none focus:border-[#3B6A8C]`}
-                />
-              </div>
-            </label>
-            <label>
-              <div className="flex justify-between text-[#5F6B73]">
-                <span>Save {pct}%</span>
-                <span>Spend {100 - pct}%</span>
-              </div>
-              <input type="range" min={0} max={100} step={5} value={pct} onChange={(e) => setPct(Number(e.target.value))} className="mt-2 w-full accent-[#3B6A8C]" />
-            </label>
-            <button type="submit" disabled={goalPence <= 0} className="h-11 rounded-3xl bg-[#BAD8EC] text-sm font-medium text-[#14212B] disabled:opacity-50">
-              Save goal
-            </button>
-          </form>
-        ) : (
-          <>
-            <div className="flex items-baseline justify-between gap-3">
-              <div>
-                <div className={`${SERIF} text-[28px] font-medium leading-none`}>{formatPounds(save)}</div>
-                <div className="mt-1 text-sm text-[#5F6B73]">saved of {formatPounds(goal.goal)} emergency fund</div>
-              </div>
-              <button type="button" onClick={() => setEditing(true)} className="text-xs text-[#3B6A8C] underline underline-offset-2">
-                Edit goal
-              </button>
-            </div>
-            <div className="mt-3 h-2 rounded-full bg-[rgba(30,43,54,0.1)]" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-2 rounded-full bg-[#3B6A8C] transition-[width] duration-700" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="mt-1 text-right text-xs text-[#5F6B73]">{Math.round(progress)}%</div>
-
-            {sales.length === 0 ? (
-              <p className="mt-2 text-sm text-[#5F6B73]">
-                When a sale completes, {goal.savePct}% of what you take home goes to savings and {100 - goal.savePct}% to spending.
-              </p>
-            ) : (
-              <div className="mt-2 flex flex-col text-sm">
-                <div className={`flex justify-between border-t ${LINE} py-2.5`}>
-                  <span className="text-[#5F6B73]">Savings pot ({goal.savePct}%)</span>
-                  <span className="font-medium">{formatPounds(save)}</span>
-                </div>
-                <div className={`flex justify-between border-t ${LINE} py-2.5`}>
-                  <span className="text-[#5F6B73]">Spending pot ({100 - goal.savePct}%)</span>
-                  <span className="font-medium">{formatPounds(spend)}</span>
-                </div>
-                <div className={`border-t ${LINE} pt-2.5 text-xs text-[#5F6B73]`}>
-                  From {sales.length} completed sale{sales.length === 1 ? "" : "s"}: {sales.map((s) => `${s.itemName} ${formatPounds(s.net)} after fees`).join(", ")}.
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      <p className="mt-1.5 text-[11px] text-[#5F6B73]">Simulated pots only. No real money moves.</p>
     </section>
   );
 }

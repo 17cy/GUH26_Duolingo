@@ -50,7 +50,7 @@ describe("sellerUpdate — what Selly tells the seller in their chat", () => {
   it("sold and cancelled", () => {
     const sold = sellerUpdate(ev("sold", "Sold to Quinn for £115", { price: 11500 }), deal)!;
     expect(sold.text).toBe("Sold to Quinn for £115! The payment has been released to you (simulated payout).");
-    expect(sold.link).toEqual({ href: "/dashboard/L", label: "See your savings" });
+    expect(sold.link).toEqual({ href: "/dashboard/L", label: "Open dashboard" });
     expect(sellerUpdate(ev("payment_cancelled", "Deal with Quinn cancelled; held payment released"), deal)!.text).toBe(
       "The deal with Quinn was cancelled, and any held payment was released.",
     );

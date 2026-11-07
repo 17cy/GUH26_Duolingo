@@ -1,30 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dealNet, netPayout, splitProceeds } from "./payout";
-
-describe("dealNet", () => {
-  it("takes the payment fee off the agreed price for pickup", () => {
-    expect(dealNet(11500, "headphones", "pickup")).toBe(11500 - (173 + 20)); // round(172.5) = 173
-  });
-  it("also takes locker shipping by category size", () => {
-    expect(dealNet(11500, "headphones", "locker")).toBe(11500 - 193 - 650);
-    expect(dealNet(4700, "electronics", "locker")).toBe(4700 - (71 + 20) - 350);
-  });
-  it("treats an unknown handoff as pickup and never goes negative", () => {
-    expect(dealNet(11500, "headphones", undefined)).toBe(11307);
-    expect(dealNet(100, "furniture", "locker")).toBe(0);
-  });
-});
-
-describe("splitProceeds", () => {
-  it("splits 70/30 by default and keeps whole pence summing to the total", () => {
-    expect(splitProceeds(11307)).toEqual({ save: 7915, spend: 3392 });
-    expect(splitProceeds(11307, 50)).toEqual({ save: 5654, spend: 5653 });
-  });
-  it("handles 0% and 100%", () => {
-    expect(splitProceeds(1000, 0)).toEqual({ save: 0, spend: 1000 });
-    expect(splitProceeds(1000, 100)).toEqual({ save: 1000, spend: 0 });
-  });
-});
+import { netPayout } from "./payout";
 
 describe("netPayout", () => {
   it("matches the SPEC worked example (14000, flexible, headphones)", () => {

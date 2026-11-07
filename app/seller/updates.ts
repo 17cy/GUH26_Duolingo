@@ -50,7 +50,7 @@ export function sellerUpdate(e: TimelineEvent, deal: Deal | undefined): SellerUp
     case "sold":
       return {
         text: `Sold to ${buyer} for ${amount}! The payment has been released to you (simulated payout).`,
-        link: { href: `/dashboard/${e.listingId}`, label: "See your savings" },
+        link: { href: `/dashboard/${e.listingId}`, label: "Open dashboard" },
       };
     case "payment_cancelled":
       return { text: `The deal with ${buyer} was cancelled, and any held payment was released.` };
