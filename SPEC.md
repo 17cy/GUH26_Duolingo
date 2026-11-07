@@ -231,7 +231,7 @@ proceeds are split into two simulated pots and a progress bar shows the goal. La
 
 1. Buyer opens `/buy/[listingId]` (public listing data only: never the floor price).
 2. First agent message, exactly:
-   > "Hi! I'm FlipAgent, an AI assistant selling this on behalf of the owner. I can answer
+   > "Hi! I'm Selly, an AI assistant selling this on behalf of the owner. I can answer
    > questions, take offers and arrange a safe payment."
 3. Buyer chats and makes offers; the agent negotiates per the rules below.
 4. Agreed → seller approves → payment link (single-use, 30-minute expiry) → payment held.
