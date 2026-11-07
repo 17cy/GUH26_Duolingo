@@ -4,7 +4,7 @@ import type { Deal, Listing } from "@/lib/types";
 // Allowlist, so new secret fields on Listing never leak by default.
 
 export type PublicListing = Pick<Listing, "id" | "sellerName" | "item" | "imageUrl" | "description" | "listPrice" | "status">;
-export type PublicDeal = Pick<Deal, "id" | "listingId" | "price" | "status">;
+export type PublicDeal = Pick<Deal, "id" | "listingId" | "price" | "status" | "handoffMethod" | "pickupSlot" | "tracking">;
 
 export function toPublicListing(l: Listing): PublicListing {
   return {
@@ -19,5 +19,13 @@ export function toPublicListing(l: Listing): PublicListing {
 }
 
 export function toPublicDeal(d: Deal): PublicDeal {
-  return { id: d.id, listingId: d.listingId, price: d.price, status: d.status };
+  return {
+    id: d.id,
+    listingId: d.listingId,
+    price: d.price,
+    status: d.status,
+    handoffMethod: d.handoffMethod,
+    pickupSlot: d.pickupSlot,
+    tracking: d.tracking,
+  };
 }

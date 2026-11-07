@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PublicDeal, PublicListing } from "@/lib/negotiation/public";
 import type { Item } from "@/lib/types";
 import { AgentText, DEAL_STATUS } from "../AgentText";
+import { HandoffChoice, TrackingSteps, type HandoffOptions } from "../Delivery";
 
 // Selly design tokens (shared with app/seller): cream #F6F0E6 · card #FBF8F2 · ink #1E2B36 ·
 // muted #5F6B73 · blue #BAD8EC · deep blue #3B6A8C
@@ -20,6 +21,7 @@ interface Conversation {
   listing: PublicListing;
   messages: ChatMessage[];
   deal: PublicDeal | null;
+  handoffOptions: HandoffOptions | null;
 }
 
 const CONDITION: Record<Item["condition"], string> = { new: "New", like_new: "Like new", good: "Good", fair: "Fair", poor: "Poor" };
@@ -161,8 +163,13 @@ export default function BuyPage() {
               {convo?.deal && (
                 <div className="rounded-2xl bg-[#BAD8EC] px-4 py-3 text-sm text-[#14212B]">
                   <span className="font-medium">Deal at {gbp(convo.deal.price)}</span> · {DEAL_STATUS[convo.deal.status] ?? convo.deal.status}
+                  {convo.deal.pickupSlot && convo.deal.status === "payment_held" && <div className="mt-1">Pickup: {convo.deal.pickupSlot}</div>}
                 </div>
               )}
+              {convo?.handoffOptions && (
+                <HandoffChoice listingId={listingId} buyerName={name} options={convo.handoffOptions} onUpdate={(c) => setConvo(c as Conversation)} />
+              )}
+              {convo?.deal?.tracking && <TrackingSteps tracking={convo.deal.tracking} />}
               {convo?.messages.map((m) =>
                 m.from === "buyer" ? (
                   <div key={m.id} className="max-w-[280px] self-end rounded-[20px] bg-[#BAD8EC] px-4 py-3 text-[15px] leading-[1.55] text-[#14212B]">
