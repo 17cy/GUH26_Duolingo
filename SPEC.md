@@ -11,8 +11,8 @@ safely turn into cash.
 
 **User.** Students and young renters selling items locally (end of term, moving out).
 
-**Tracks.** BNY "Most unique financial tool" (agent negotiation + escrow handoff) and NatWest
-"Financial inclusion & resilience" (unused stuff becomes cash, with scam protection built in).
+**Track.** NatWest "Financial inclusion & resilience": unused stuff becomes cash, with AI
+negotiation, escrow and scam protection built in.
 
 ---
 
