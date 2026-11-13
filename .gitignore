@@ -5,3 +5,5 @@ data/db.json
 public/uploads/
 *.tsbuildinfo
 next-env.d.ts
+CLAUDE.md
+.claude/
