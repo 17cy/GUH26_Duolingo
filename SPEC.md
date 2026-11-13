@@ -1,17 +1,18 @@
 # SPEC.md — Selly
 
 **One line:** an AI agent that sells your second-hand item for you: identifies it from a photo,
-prices it, posts it, negotiates, holds the buyer's money in escrow until handoff, and turns the
-proceeds into savings.
+prices it, posts it, negotiates, holds the buyer's money in escrow until handoff, and keeps the
+seller updated at every step.
 
 **Problem.** Purchase scams are the most common type of authorised push payment fraud in the UK,
 and they concentrate on social marketplaces. Sellers also lose time to lowballers and haggling,
-and many people have no savings buffer but do own hundreds of pounds of unused items.
+and many people have no savings buffer but do own hundreds of pounds of unused items they could
+safely turn into cash.
 
 **User.** Students and young renters selling items locally (end of term, moving out).
 
 **Tracks.** BNY "Most unique financial tool" (agent negotiation + escrow handoff) and NatWest
-"Financial inclusion & resilience" (unused stuff becomes an emergency fund, safely).
+"Financial inclusion & resilience" (unused stuff becomes cash, with scam protection built in).
 
 ---
 
