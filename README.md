@@ -61,4 +61,4 @@ scam filters and the escrow flow.
 
 ## Team
 
-Built by 17cy and Oguz Alp at GreatUniHack 2026, for the NatWest and BNY challenges.
+Built by Vincent and Oguz at GreatUniHack 2026, for the NatWest challenge.
